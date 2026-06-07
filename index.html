@@ -31,7 +31,8 @@
   .tag{border:1px solid; border-radius:2px; padding:4px 11px; font:600 11px/1 var(--sans);
        letter-spacing:.12em; text-transform:uppercase; cursor:pointer; user-select:none; background:transparent}
   .tag:hover{filter:brightness(.92)}
-  .tag.country{color:var(--soft); border-color:var(--line)}  /* flag chips; active color set in JS */
+  .tag.country{color:var(--soft); border-color:var(--line); font-size:15px; line-height:1; padding:3px 8px; letter-spacing:0}  /* compact flag-only chips; active color set in JS */
+  .tag.price{color:var(--soft); border-color:var(--line); font-variant-numeric:tabular-nums}   /* price-range chips; active color set in JS */
   .swatch{display:inline-flex; align-items:center; gap:6px; color:var(--soft); font:500 11px/1 var(--sans); letter-spacing:.07em; text-transform:uppercase}
   .swatch i{width:18px; height:3px; border-radius:2px; display:inline-block}
 
@@ -116,6 +117,7 @@
     <div class="legend" id="store-legend"></div>
     <div class="legend" id="stock-legend"></div>
     <div class="legend" id="band-legend"></div>
+    <div class="legend" id="price-legend"></div>
     <div class="legend" id="country-legend"></div>
     <div class="legend" id="bar-legend"></div>
   </header>
@@ -174,19 +176,31 @@ const STOCK_LABEL = {in:'In stock', out:'Sold out'};
 const COUNTRY_NAMES = {US:'USA',FR:'France',IT:'Italy',ES:'Spain',PT:'Portugal',DE:'Germany',
   AT:'Austria',AU:'Australia',NZ:'New Zealand',AR:'Argentina',CL:'Chile',ZA:'South Africa',
   CA:'Canada',GR:'Greece',HU:'Hungary',GB:'England',CH:'Switzerland',LB:'Lebanon',IL:'Israel'};
+// Price-range buckets for the filter. Each wine is tagged with the key of the
+// first band it falls into; chips read "≤ $50 / $50–80 / > $80".
+const PRICE_BANDS = [
+  ['lo',  '≤ $50',   p => p != null && p <= 50],
+  ['mid', '$50–80',  p => p != null && p > 50 && p <= 80],
+  ['hi',  '> $80',   p => p != null && p > 80],
+];
+function priceBand(p){ const b = PRICE_BANDS.find(([,,test])=>test(p)); return b ? b[0] : ''; }
+const PRICE_LABEL = Object.fromEntries(PRICE_BANDS.map(([k,l])=>[k,l]));
+
 let activeBand = null;
 let activeStore = null;
 let activeStock = null;   // 'in' | 'out' | null
 let activeCountry = null; // ISO code | null
+let activePrice = null;   // 'lo' | 'mid' | 'hi' | null
 
 function setSubtitle(shown){
   const el = document.getElementById('subtitle');
-  if(!activeBand && !activeStore && !activeStock && !activeCountry){
+  if(!activeBand && !activeStore && !activeStock && !activeCountry && !activePrice){
     el.textContent = `${TOTAL} wines · ${IN_STOCK} in stock · tap a chip to filter, a card to expand`;
     return;
   }
   const label = [activeStock ? STOCK_LABEL[activeStock] : '', activeStore ? storeLabel(activeStore) : '',
                  activeCountry ? (COUNTRY_NAMES[activeCountry]||activeCountry) : '',
+                 activePrice ? PRICE_LABEL[activePrice] : '',
                  activeBand ? BAND_LABEL[activeBand] : ''].filter(Boolean).join(' · ');
   el.textContent = `${shown} shown of ${TOTAL} (${label}) · tap an active filter to clear`;
 }
@@ -213,12 +227,19 @@ function applyFilters(){
     t.style.color = on ? IVORY : 'var(--soft)';
     t.style.borderColor = on ? c : 'var(--line)';
   });
+  document.querySelectorAll('#price-legend .tag').forEach(t=>{
+    const on = t.dataset.price === activePrice, c = '#7c2433';  // wine accent
+    t.style.background = on ? c : 'transparent';
+    t.style.color = on ? IVORY : 'var(--soft)';
+    t.style.borderColor = on ? c : 'var(--line)';
+  });
   let shown = 0;
   document.querySelectorAll('.card').forEach(card=>{
     const show = (!activeBand || card.dataset.band === activeBand)
               && (!activeStore || card.dataset.store === activeStore)
               && (!activeStock || card.dataset.stock === activeStock)
-              && (!activeCountry || card.dataset.country === activeCountry);
+              && (!activeCountry || card.dataset.country === activeCountry)
+              && (!activePrice || card.dataset.price === activePrice);
     card.style.display = show ? '' : 'none';
     if(show) shown++;
   });
@@ -229,6 +250,7 @@ function toggleBand(b){ activeBand = (activeBand === b) ? null : b; applyFilters
 function toggleStore(s){ activeStore = (activeStore === s) ? null : s; applyFilters(); }
 function toggleStock(s){ activeStock = (activeStock === s) ? null : s; applyFilters(); }
 function toggleCountry(c){ activeCountry = (activeCountry === c) ? null : c; applyFilters(); }
+function togglePrice(p){ activePrice = (activePrice === p) ? null : p; applyFilters(); }
 
 (function legends(){
   document.getElementById('band-legend').innerHTML =
@@ -252,14 +274,25 @@ function toggleCountry(c){ activeCountry = (activeCountry === c) ? null : c; app
     document.querySelectorAll('#stock-legend .tag').forEach(t=>t.addEventListener('click',()=>toggleStock(t.dataset.stock)));
   }
 
-  // Country filter — a flag chip per origin present, most common first.
+  // Price filter — only the bands that actually have wines, low to high.
+  const priceCounts = {};
+  wines.forEach(w=>{ const b=priceBand(w.price); if(b) priceCounts[b]=(priceCounts[b]||0)+1; });
+  const priceKeys = PRICE_BANDS.map(([k])=>k).filter(k=>priceCounts[k]);
+  if(priceKeys.length > 1){
+    document.getElementById('price-legend').innerHTML =
+      priceKeys.map(k=>`<span class="tag price" data-price="${k}" title="${priceCounts[k]} wines">${PRICE_LABEL[k]}</span>`).join('');
+    document.querySelectorAll('#price-legend .tag').forEach(t=>t.addEventListener('click',()=>togglePrice(t.dataset.price)));
+  }
+
+  // Country filter — compact flag-only chips, one per origin, most common first.
+  // The country name + count live in the tooltip so the row stays a single line.
   const counts = {}, flags = {};
   wines.forEach(w=>{ if(w.country){ counts[w.country]=(counts[w.country]||0)+1; flags[w.country]=w.flag; } });
   const countries = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
   if(countries.length > 1){
     document.getElementById('country-legend').innerHTML =
-      countries.map(c=>`<span class="tag country" data-country="${c}" title="${counts[c]} wines">`
-        + `${flags[c]||''} ${COUNTRY_NAMES[c]||c}</span>`).join('');
+      countries.map(c=>`<span class="tag country" data-country="${c}" title="${COUNTRY_NAMES[c]||c} · ${counts[c]} wines">`
+        + `${flags[c]||esc(c)}</span>`).join('');
     document.querySelectorAll('#country-legend .tag').forEach(t=>t.addEventListener('click',()=>toggleCountry(t.dataset.country)));
   }
 
@@ -294,9 +327,9 @@ wines.forEach((w,i)=>{
   const chip = w.store
     ? `<span class="store-chip" style="color:${storeColor(w.store)};border-color:${storeColor(w.store)}">${esc(storeLabel(w.store))}</span>`
     : '';
-  const stockTag = w.inStock
-    ? `<span class="stock-tag in">In stock</span>`
-    : `<span class="stock-tag out">Sold out</span>`;
+  // Sold-out is the exception worth flagging; "In stock" is the default, so we
+  // drop that chip from the card to cut clutter (the stock filter still covers it).
+  const stockTag = w.inStock ? '' : `<span class="stock-tag out">Sold out</span>`;
   const TR_LABEL = {established:'Established', emerging:'Emerging', speculative:'Speculative'};
   const trTag = w.trackRecord
     ? `<span class="tr-tag tr-${w.trackRecord}" title="Producer track record">${TR_LABEL[w.trackRecord]||w.trackRecord}</span>`
@@ -325,6 +358,7 @@ wines.forEach((w,i)=>{
   card.dataset.store=w.store||'';
   card.dataset.stock = w.inStock ? 'in' : 'out';
   card.dataset.country = w.country || '';
+  card.dataset.price = priceBand(w.price);
   card.innerHTML =
     `<div class="head">
        ${img}
