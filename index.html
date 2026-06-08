@@ -186,71 +186,80 @@ const PRICE_BANDS = [
 function priceBand(p){ const b = PRICE_BANDS.find(([,,test])=>test(p)); return b ? b[0] : ''; }
 const PRICE_LABEL = Object.fromEntries(PRICE_BANDS.map(([k,l])=>[k,l]));
 
-let activeBand = null;
-let activeStore = null;
-let activeStock = null;   // 'in' | 'out' | null
-let activeCountry = null; // ISO code | null
-let activePrice = null;   // 'lo' | 'mid' | 'hi' | null
+// Each filter group holds a SET of selected values. Within a group the chips
+// are OR'd (any selected origin matches); across groups they AND together.
+// An empty set means "no constraint from this group".
+const activeBand = new Set();
+const activeStore = new Set();
+const activeStock = new Set();   // 'in' | 'out'
+const activeCountry = new Set(); // ISO codes
+const activePrice = new Set();   // 'lo' | 'mid' | 'hi'
+const anyActive = () => activeBand.size || activeStore.size || activeStock.size
+                     || activeCountry.size || activePrice.size;
 
 function setSubtitle(shown){
   const el = document.getElementById('subtitle');
-  if(!activeBand && !activeStore && !activeStock && !activeCountry && !activePrice){
-    el.textContent = `${TOTAL} wines · ${IN_STOCK} in stock · tap a chip to filter, a card to expand`;
+  if(!anyActive()){
+    el.textContent = `${TOTAL} wines · ${IN_STOCK} in stock · tap chips to filter, a card to expand`;
     return;
   }
-  const label = [activeStock ? STOCK_LABEL[activeStock] : '', activeStore ? storeLabel(activeStore) : '',
-                 activeCountry ? (COUNTRY_NAMES[activeCountry]||activeCountry) : '',
-                 activePrice ? PRICE_LABEL[activePrice] : '',
-                 activeBand ? BAND_LABEL[activeBand] : ''].filter(Boolean).join(' · ');
-  el.textContent = `${shown} shown of ${TOTAL} (${label}) · tap an active filter to clear`;
+  const label = [
+    ...[...activeStock].map(s=>STOCK_LABEL[s]),
+    ...[...activeStore].map(s=>storeLabel(s)),
+    ...[...activeCountry].map(c=>COUNTRY_NAMES[c]||c),
+    ...[...activePrice].map(p=>PRICE_LABEL[p]),
+    ...[...activeBand].map(b=>BAND_LABEL[b]),
+  ].filter(Boolean).join(' · ');
+  el.textContent = `${shown} shown of ${TOTAL} (${label}) · tap active chips to clear`;
 }
 
 function applyFilters(){
   document.querySelectorAll('#band-legend .tag').forEach(t=>{
-    const on = t.dataset.band === activeBand, c = BAND_COLORS[t.dataset.band];
+    const on = activeBand.has(t.dataset.band), c = BAND_COLORS[t.dataset.band];
     t.style.background = on ? c : 'transparent';
     t.style.color = on ? IVORY : c;
   });
   document.querySelectorAll('#store-legend .tag').forEach(t=>{
-    const on = t.dataset.store === activeStore, c = storeColor(t.dataset.store);
+    const on = activeStore.has(t.dataset.store), c = storeColor(t.dataset.store);
     t.style.background = on ? c : 'transparent';
     t.style.color = on ? IVORY : c;
   });
   document.querySelectorAll('#stock-legend .tag').forEach(t=>{
-    const on = t.dataset.stock === activeStock, c = (t.dataset.stock === 'in' ? '#3f7d5f' : '#9a8c78');
+    const on = activeStock.has(t.dataset.stock), c = (t.dataset.stock === 'in' ? '#3f7d5f' : '#9a8c78');
     t.style.background = on ? c : 'transparent';
     t.style.color = on ? IVORY : c;
   });
   document.querySelectorAll('#country-legend .tag').forEach(t=>{
-    const on = t.dataset.country === activeCountry, c = '#7c2433';  // wine accent
+    const on = activeCountry.has(t.dataset.country), c = '#7c2433';  // wine accent
     t.style.background = on ? c : 'transparent';
     t.style.color = on ? IVORY : 'var(--soft)';
     t.style.borderColor = on ? c : 'var(--line)';
   });
   document.querySelectorAll('#price-legend .tag').forEach(t=>{
-    const on = t.dataset.price === activePrice, c = '#7c2433';  // wine accent
+    const on = activePrice.has(t.dataset.price), c = '#7c2433';  // wine accent
     t.style.background = on ? c : 'transparent';
     t.style.color = on ? IVORY : 'var(--soft)';
     t.style.borderColor = on ? c : 'var(--line)';
   });
   let shown = 0;
   document.querySelectorAll('.card').forEach(card=>{
-    const show = (!activeBand || card.dataset.band === activeBand)
-              && (!activeStore || card.dataset.store === activeStore)
-              && (!activeStock || card.dataset.stock === activeStock)
-              && (!activeCountry || card.dataset.country === activeCountry)
-              && (!activePrice || card.dataset.price === activePrice);
+    const show = (!activeBand.size    || activeBand.has(card.dataset.band))
+              && (!activeStore.size   || activeStore.has(card.dataset.store))
+              && (!activeStock.size   || activeStock.has(card.dataset.stock))
+              && (!activeCountry.size || activeCountry.has(card.dataset.country))
+              && (!activePrice.size   || activePrice.has(card.dataset.price));
     card.style.display = show ? '' : 'none';
     if(show) shown++;
   });
   setSubtitle(shown);
 }
 
-function toggleBand(b){ activeBand = (activeBand === b) ? null : b; applyFilters(); }
-function toggleStore(s){ activeStore = (activeStore === s) ? null : s; applyFilters(); }
-function toggleStock(s){ activeStock = (activeStock === s) ? null : s; applyFilters(); }
-function toggleCountry(c){ activeCountry = (activeCountry === c) ? null : c; applyFilters(); }
-function togglePrice(p){ activePrice = (activePrice === p) ? null : p; applyFilters(); }
+function toggleSet(set, v){ set.has(v) ? set.delete(v) : set.add(v); applyFilters(); }
+function toggleBand(b){ toggleSet(activeBand, b); }
+function toggleStore(s){ toggleSet(activeStore, s); }
+function toggleStock(s){ toggleSet(activeStock, s); }
+function toggleCountry(c){ toggleSet(activeCountry, c); }
+function togglePrice(p){ toggleSet(activePrice, p); }
 
 (function legends(){
   document.getElementById('band-legend').innerHTML =
