@@ -55,6 +55,7 @@
   .tag.price{color:var(--soft); border-color:var(--line); font-variant-numeric:tabular-nums}   /* price-range chips; active color set in JS */
 
   /* Catalogue entries */
+  #list{display:flex; flex-direction:column}  /* enables search relevance ordering via `order` */
   .card{background:var(--paper); border:1px solid var(--line); border-radius:3px; margin-bottom:14px;
         overflow:hidden; box-shadow:0 1px 2px rgba(60,40,20,.05); transition:box-shadow .15s,border-color .15s;}
   .card.open{border-color:var(--gold); box-shadow:0 3px 16px rgba(90,60,30,.11)}
@@ -152,16 +153,6 @@
     <p class="freshness" id="freshness"></p>
     <p class="subtitle" id="subtitle"></p>
   </header>
-  <!-- In-store lookup: pinned to the top so you can search a bottle the moment the
-       page loads, even when scrolled deep into the list. -->
-  <div class="searchwrap">
-    <div class="search" id="searchbox">
-      <span class="si" aria-hidden="true">🔍</span>
-      <input id="search" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
-             placeholder="Search — producer, name, region, or grape">
-      <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
-    </div>
-  </div>
   <div class="filters">
     <div class="rule"></div>
     <div class="legend" id="store-legend"></div>
@@ -170,6 +161,16 @@
     <div class="legend" id="price-legend"></div>
     <div class="legend" id="preview-legend"></div>
     <div class="legend" id="country-legend"></div>
+  </div>
+  <!-- In-store lookup: sits right under the origin flags, and stays pinned to the
+       top once you scroll so you can search a bottle anytime, even deep in the list. -->
+  <div class="searchwrap">
+    <div class="search" id="searchbox">
+      <span class="si" aria-hidden="true">🔍</span>
+      <input id="search" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
+             placeholder="Search — producer, name, region, country, or grape">
+      <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
+    </div>
   </div>
   <main id="list"></main>
   <p class="empty" id="empty" hidden></p>
@@ -262,16 +263,25 @@ const activeCountry = new Set(); // ISO codes
 const activePrice = new Set();   // 'lo' | 'mid' | 'hi'
 const activePreview = new Set(); // 'preview' — show only the hand-scored v3.0 preview wines
 const PREVIEW_COUNT = wines.filter(w=>w.preview).length;
-// Free-text search (in-store bottle lookup). Tokens are AND-matched against each
-// wine's name + region + type + the shop's description — so "terre nere", "etna", a
-// grape ("nebbiolo"), or a tasting note ("graphite") all find it. The index is built
-// from data already embedded in the page, so it adds no page weight; cards reference
-// it by position via dataset.i.
+// Free-text search built to feel like any other site's search box:
+//  - accent/punctuation-folded so "rhone" finds "Rhône", "saint cosme" finds
+//    "Saint-Cosme", and apostrophes don't matter (norm() below);
+//  - tokens AND-matched (every word must appear);
+//  - two-tier RELEVANCE: a wine whose NAME/region/country matches ranks above one
+//    that only matches deep in the shop's description, so the bottle you typed
+//    surfaces first. The description is still searched (so a grape like "nebbiolo"
+//    or a note like "graphite" finds it) — it just ranks lower.
+// Built from data already on the page, so it adds no page weight.
+function norm(s){
+  return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')   // strip accents
+    .toLowerCase().replace(/['’`]/g,'')                       // drop apostrophes
+    .replace(/[^a-z0-9]+/g,' ').trim();                            // other punctuation -> space
+}
 const searchEl = document.getElementById('search');
-const searchIndex = wines.map(w =>
-  `${w.name||''} ${w.region||''} ${w.type||''} ${w.shopDesc||''}`.toLowerCase());
-let searchQuery = '';
-let searchTokens = [];
+const idIndex   = wines.map(w => norm(`${w.name||''} ${w.region||''} ${w.type||''} ${COUNTRY_NAMES[w.country]||w.country||''}`));
+const fullIndex = wines.map((w,i) => `${idIndex[i]} ${norm(w.shopDesc||'')}`);
+let searchQuery = '';   // the text the user typed (for the subtitle/empty-state)
+let searchTokens = [];  // normalized tokens (for matching)
 const anyActive = () => activeBand.size || activeStore.size || activeStock.size
                      || activeCountry.size || activePrice.size;
 
@@ -339,14 +349,21 @@ function applyFilters(){
   });
   let shown = 0;
   document.querySelectorAll('.card').forEach(card=>{
+    const i = +card.dataset.i;
+    // Identity match (name/region/country) vs a deeper description-only match.
+    const idHit = searchTokens.every(t => idIndex[i].includes(t));
+    const hit   = idHit || searchTokens.every(t => fullIndex[i].includes(t));
     const show = (!activeBand.size    || activeBand.has(card.dataset.band))
               && (!activeStore.size   || activeStore.has(card.dataset.store))
               && (!activeStock.size   || activeStock.has(card.dataset.stock))
               && (!activeCountry.size || activeCountry.has(card.dataset.country))
               && (!activePrice.size   || activePrice.has(card.dataset.price))
               && (!activePreview.size || card.dataset.preview === '1')
-              && (searchTokens.every(t => searchIndex[+card.dataset.i].includes(t)));
+              && (searchTokens.length === 0 || hit);
     card.style.display = show ? '' : 'none';
+    // Relevance: identity matches stay in score order (0); description-only matches
+    // sink below them (1). With no search, everything is 0 -> pure score order.
+    card.style.order = (show && searchTokens.length && !idHit) ? '1' : '0';
     if(show) shown++;
   });
   setSubtitle(shown);
@@ -354,7 +371,7 @@ function applyFilters(){
 
 function runSearch(){
   searchQuery = searchEl.value.trim();
-  searchTokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+  searchTokens = norm(searchQuery).split(' ').filter(Boolean);
   document.getElementById('searchbox').classList.toggle('has-text', searchQuery.length > 0);
   applyFilters();
 }
@@ -509,7 +526,7 @@ wines.forEach((w,i)=>{
   card.dataset.country = w.country || '';
   card.dataset.price = priceBand(w.price);
   card.dataset.preview = w.preview ? '1' : '0';
-  card.dataset.i = i;  // position into searchIndex (built once from the embedded data)
+  card.dataset.i = i;  // position into idIndex/fullIndex (built once from the embedded data)
   card.innerHTML =
     `<div class="head">
        ${img}
