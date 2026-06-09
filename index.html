@@ -90,9 +90,11 @@
   .store-chip{font:700 10px/1 var(--sans); text-transform:uppercase; letter-spacing:.1em; border:1px solid; border-radius:2px; padding:3px 7px}
   /* Price tier — the "kind of buy" at this price; never competes with the score. */
   .tier-tag{font:700 9px/1 var(--sans); text-transform:uppercase; letter-spacing:.1em; border:1px solid; border-radius:2px; padding:2px 6px}
+  .tier-tag.tier-everyday{color:#5b7355; border-color:rgba(91,115,85,.4); background:rgba(91,115,85,.07)}
   .tier-tag.tier-value{color:#3f6790; border-color:rgba(63,103,144,.35); background:rgba(63,103,144,.07)}
   .tier-tag.tier-primary{color:var(--wine); border-color:rgba(124,36,51,.35); background:rgba(124,36,51,.06)}
-  .tier-tag.tier-exception{color:var(--gold); border-color:rgba(154,118,52,.4); background:rgba(154,118,52,.08)}
+  .tier-tag.tier-splurge{color:var(--gold); border-color:rgba(154,118,52,.4); background:rgba(154,118,52,.08)}
+  .tier-tag.tier-trophy{color:#6d4076; border-color:rgba(109,64,118,.4); background:rgba(109,64,118,.07)}
   .preview-tag{font:700 9px/1 var(--sans); text-transform:uppercase; letter-spacing:.1em; border:1px solid; border-radius:2px; padding:2px 6px; color:#fff; background:#3f7d5f; border-color:#3f7d5f}
   .stock-tag{font:700 10px/1 var(--sans); text-transform:uppercase; letter-spacing:.1em; border:1px solid; border-radius:2px; padding:3px 7px}
   .stock-tag.in{color:var(--strong); border-color:rgba(63,125,95,.4); background:rgba(63,125,95,.08)}
@@ -244,14 +246,16 @@ const COUNTRY_NAMES = {US:'USA',FR:'France',IT:'Italy',ES:'Spain',PT:'Portugal',
 // Price tiers (v3.0 framework's data-anchored seams). The filter doubles as the
 // tier filter; each wine is tagged with the tier its price falls into.
 const PRICE_BANDS = [
-  ['value',     'Value · < $35',     p => p != null && p < 35],
-  ['primary',   'Primary · $35–68',  p => p != null && p >= 35 && p < 69],
-  ['exception', 'Splurge · $69+',     p => p != null && p >= 69],
+  ['everyday', 'Everyday · < $20',   p => p != null && p < 20],
+  ['value',    'Value · $20–34',     p => p != null && p >= 20 && p < 35],
+  ['primary',  'Primary · $35–68',   p => p != null && p >= 35 && p < 69],
+  ['splurge',  'Splurge · $69–146',  p => p != null && p >= 69 && p < 147],
+  ['trophy',   'Trophy · $147+',     p => p != null && p >= 147],
 ];
 function priceBand(p){ const b = PRICE_BANDS.find(([,,test])=>test(p)); return b ? b[0] : ''; }
 const PRICE_LABEL = Object.fromEntries(PRICE_BANDS.map(([k,l])=>[k,l]));
-const TIER_LABEL = {value:'Value', primary:'Primary', exception:'Splurge'};
-const TIER_COLORS = {value:'#3f6790', primary:'#7c2433', exception:'#9a7634'};
+const TIER_LABEL = {everyday:'Everyday', value:'Value', primary:'Primary', splurge:'Splurge', trophy:'Trophy'};
+const TIER_COLORS = {everyday:'#5b7355', value:'#3f6790', primary:'#7c2433', splurge:'#9a7634', trophy:'#6d4076'};
 
 // Each filter group holds a SET of selected values. Within a group the chips
 // are OR'd (any selected origin matches); across groups they AND together.
@@ -477,7 +481,7 @@ wines.forEach((w,i)=>{
     ? `<span class="tr-tag tr-${w.trackRecord}" title="Producer track record">${TR_LABEL[w.trackRecord]||w.trackRecord}</span>`
     : '';
   // Tier label — the price-derived "kind of buy" (a score is read against its tier).
-  const tier = w.tier || priceBand(w.price);
+  const tier = priceBand(w.price);  // 5-band, derived from price (keeps tag + filter in sync)
   const tierTag = tier
     ? `<span class="tier-tag tier-${tier}" title="Price tier (does not affect the score)">${TIER_LABEL[tier]||tier}</span>`
     : '';
