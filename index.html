@@ -176,7 +176,10 @@ function noteHTML(note){
   // paragraph. Falls back to the full body if it can't cleanly split off the verdict.
   if(!note) return '';
   let body = note.trim(), tip = '';
-  const m = body.match(/what to look for:\s*(.+)$/is);
+  // The data writes the teaching cue with a "What to look for:" lead-in (the prompt
+  // contract). Accept "How to Shop:" too, so a future prompt wording can't silently
+  // break the split. Either way it's relabeled "How to Shop:" on screen.
+  const m = body.match(/(?:what to look for|how to shop):\s*(.+)$/is);
   if(m){ tip = m[1].trim(); body = body.slice(0, m.index).trim(); }
   // Drop the verdict sentence (shown in the head) and lead with the rationale.
   const lead = (body.match(/^.*?[.!?](?=\s|$)/) || [body])[0].trim();
