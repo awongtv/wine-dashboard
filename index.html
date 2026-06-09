@@ -33,8 +33,6 @@
   .tag:hover{filter:brightness(.92)}
   .tag.country{color:var(--soft); border-color:var(--line); font-size:15px; line-height:1; padding:3px 8px; letter-spacing:0}  /* compact flag-only chips; active color set in JS */
   .tag.price{color:var(--soft); border-color:var(--line); font-variant-numeric:tabular-nums}   /* price-range chips; active color set in JS */
-  .swatch{display:inline-flex; align-items:center; gap:6px; color:var(--soft); font:500 11px/1 var(--sans); letter-spacing:.07em; text-transform:uppercase}
-  .swatch i{width:18px; height:3px; border-radius:2px; display:inline-block}
 
   /* Catalogue entries */
   .card{background:var(--paper); border:1px solid var(--line); border-radius:3px; margin-bottom:14px;
@@ -100,11 +98,9 @@
   .note p{font-family:var(--serif); font-size:17px; line-height:1.6; color:#332e25; margin:0 0 10px}
   .note p:last-child{margin-bottom:0}
   .note-lead{color:var(--ink); font-weight:700}
-  /* "What to look for" — the teaching takeaway, set off as a tip callout. */
-  .note-tip{font-family:var(--sans); font-size:13.5px; line-height:1.55; color:#4a4336;
-        background:rgba(63,125,95,.07); border-radius:4px; padding:9px 12px; margin:12px 0 0}
-  .note-tip .tip-label{display:block; font:700 10px/1 var(--sans); letter-spacing:.1em;
-        text-transform:uppercase; color:var(--strong); margin-bottom:5px}
+  /* "What to look for" — the teaching takeaway, folded into the same paragraph
+     as the verdict, just bolded/colored so it still reads as the takeaway. */
+  .note-cue{color:var(--strong); font-weight:700}
   .section-label.shop{color:var(--soft)}
   .shopdesc{margin-top:2px}
   .shopdesc p{font:400 13px/1.55 var(--sans); color:#6f6557; margin:0 0 7px}
@@ -129,7 +125,6 @@
     <div class="legend" id="price-legend"></div>
     <div class="legend" id="preview-legend"></div>
     <div class="legend" id="country-legend"></div>
-    <div class="legend" id="bar-legend"></div>
   </header>
   <main id="list"></main>
 </div>
@@ -156,8 +151,9 @@ function bar(label,val,max,color){
 }
 function noteHTML(note){
   // v3.0 notes are three beats: a one-sentence VERDICT, the rationale, and a final
-  // "What to look for: …" teaching cue. Render the verdict as a bold lead, the
-  // rationale as prose, and the cue as a set-off tip. Older notes (no cue) just
+  // "What to look for: …" teaching cue. Render the verdict as a bold lead and the
+  // rationale as prose, then fold the cue into the SAME paragraph with a bold
+  // "What to look for:" lead-in (no set-off callout). Older notes (no cue) just
   // get the bold-lead + prose treatment, which still reads cleanly.
   if(!note) return '';
   let body = note.trim(), tip = '';
@@ -166,9 +162,9 @@ function noteHTML(note){
   // Bold the first sentence (the verdict); keep the rest as a paragraph.
   const lead = (body.match(/^.*?[.!?](?=\s|$)/) || [body])[0].trim();
   const rest = body.slice(lead.length).trim();
-  let html = `<div class="note"><p><b class="note-lead">${esc(lead)}</b>${rest ? ' ' + esc(rest) : ''}</p>`;
-  if(tip) html += `<div class="note-tip"><span class="tip-label">What to look for</span>${esc(tip)}</div>`;
-  return html + `</div>`;
+  let inner = `<b class="note-lead">${esc(lead)}</b>` + (rest ? ' ' + esc(rest) : '');
+  if(tip) inner += ` <b class="note-cue">What to look for:</b> ${esc(tip)}`;
+  return `<div class="note"><p>${inner}</p></div>`;
 }
 function shopDescHTML(desc, store){
   // The shop's own listing text, shown under the AI verdict for provenance.
@@ -337,10 +333,6 @@ function togglePreview(p){ toggleSet(activePreview, p); }
     document.querySelectorAll('#country-legend .tag').forEach(t=>t.addEventListener('click',()=>toggleCountry(t.dataset.country)));
   }
 
-  document.getElementById('bar-legend').innerHTML =
-    [['BLIC+T /50',BAR_COLORS.blic],['Loopholes /30',BAR_COLORS.loop],['Value /20',BAR_COLORS.value]]
-      .map(([l,c])=>`<span class="swatch"><i style="background:${c}"></i>${l}</span>`).join('');
-
   const fresh=document.getElementById('freshness');
   if(META.scraped || META.scored){
     const bits=[];
@@ -394,8 +386,8 @@ wines.forEach((w,i)=>{
       }).join('') + `</div>`
     : `<div class="subtotal">BLIC+T subtotal: ${w.blicTotal}/50 (per-criterion breakdown not available)</div>`;
   const loops = (w.loops && w.loops.length)
-    ? `<div class="section-label">Loopholes firing</div><div class="loops">`+w.loops.map(l=>`<span class="loop">${esc(l)}</span>`).join('')+`</div>`
-    : `<div class="noloops">No loopholes firing</div>`;
+    ? `<div class="section-label">What gives it an edge</div><div class="loops">`+w.loops.map(l=>`<span class="loop">${esc(l)}</span>`).join('')+`</div>`
+    : `<div class="noloops">No standout edge</div>`;
   const note = noteHTML(w.note);
   const shopDesc = shopDescHTML(w.shopDesc, w.store);
   const shopLink = w.url
@@ -417,7 +409,7 @@ wines.forEach((w,i)=>{
        <div class="meta">
          <div class="name">${esc(w.name)}${vint}${ext}</div>
          <div class="sub">${w.flag?`<span class="flag" title="origin">${w.flag}</span>`:''}${chip}${tierTag}${previewTag}${stockTag}${trTag}<span class="txt">${esc(subText)}</span></div>
-         <div class="bars">${bar('BLIC+T',w.blicTotal,50,BAR_COLORS.blic)}${bar('Loophole',w.lp,30,BAR_COLORS.loop)}${bar('Value',w.val,20,BAR_COLORS.value)}</div>
+         <div class="bars">${bar('BLIC+T',w.blicTotal,50,BAR_COLORS.blic)}${bar('Edge',w.lp,30,BAR_COLORS.loop)}${bar('Value',w.val,20,BAR_COLORS.value)}</div>
        </div>
        <div class="totals">
          <div class="total" style="color:${c}">${w.total}</div>
