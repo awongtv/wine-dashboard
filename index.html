@@ -56,8 +56,10 @@
   /* One-tap presets — curated entry points so a first-time reader never needs the
      full filter taxonomy. Slightly bolder than ordinary chips. */
   .tag.preset{font-weight:700; padding:6px 13px; border-radius:3px}
-  /* Sort row: a quiet label + single-active chips. */
-  .sort-label{font:600 10px/1 var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--soft)}
+  /* Tools row: the Filters disclosure toggle + a quiet sort label + single-active chips. */
+  .sort-label{font:600 10px/1 var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--soft); margin-left:6px}
+  .tag.more{color:#8a7d6a; border-color:#8a7d6a}
+  #more-filters{margin-bottom:10px}
 
   /* Catalogue entries */
   #list{display:flex; flex-direction:column}  /* enables search relevance ordering via `order` */
@@ -165,18 +167,23 @@
     <p class="freshness" id="freshness"></p>
     <p class="subtitle" id="subtitle"></p>
   </header>
+  <!-- Progressive disclosure: the rows everyone uses (presets, type, sort) stay
+       visible; the power-user dimensions live behind one "Filters" toggle so the
+       page opens calm instead of as eleven rows of taxonomy. -->
   <div class="filters">
     <div class="rule"></div>
     <div class="legend" id="preset-legend"></div>
     <div class="legend" id="type-legend"></div>
-    <div class="legend" id="store-legend"></div>
-    <div class="legend" id="stock-legend"></div>
-    <div class="legend" id="band-legend"></div>
-    <div class="legend" id="price-legend"></div>
-    <div class="legend" id="smart-legend"></div>
     <div class="legend" id="new-legend"></div>
-    <div class="legend" id="country-legend"></div>
-    <div class="legend" id="sort-legend"></div>
+    <div class="legend" id="tools-row"></div>
+    <div id="more-filters" hidden>
+      <div class="legend" id="store-legend"></div>
+      <div class="legend" id="stock-legend"></div>
+      <div class="legend" id="band-legend"></div>
+      <div class="legend" id="price-legend"></div>
+      <div class="legend" id="smart-legend"></div>
+      <div class="legend" id="country-legend"></div>
+    </div>
   </div>
   <!-- In-store lookup: sits right under the origin flags, and stays pinned to the
        top once you scroll so you can search a bottle anytime, even deep in the list. -->
@@ -398,12 +405,23 @@ function applyFilters(){
     t.style.color = on ? IVORY : c;
     t.style.borderColor = c;
   });
-  document.querySelectorAll('#sort-legend .tag').forEach(t=>{
+  document.querySelectorAll('#tools-row .tag[data-sort]').forEach(t=>{
     const on = activeSort === t.dataset.sort, c = '#8a7d6a';
     t.style.background = on ? c : 'transparent';
     t.style.color = on ? IVORY : c;
     t.style.borderColor = c;
   });
+  // Disclosure toggle: label carries a count of active hidden-group filters, so
+  // a preset (or a previously set filter) is never invisibly constraining the list.
+  const moreT = document.getElementById('more-toggle');
+  if(moreT){
+    const hiddenActive = activeStore.size + activeStock.size + activeBand.size
+                       + activeCountry.size + activePrice.size + activeSmart.size;
+    moreT.textContent = `Filters${hiddenActive ? ' · ' + hiddenActive : ''} ${moreOpen ? '▴' : '▾'}`;
+    moreT.setAttribute('aria-expanded', String(moreOpen));
+    const c = hiddenActive ? '#7c2433' : '#8a7d6a';
+    moreT.style.color = c; moreT.style.borderColor = c;
+  }
   document.querySelectorAll('.legend .tag').forEach(t=>t.setAttribute('aria-pressed',
     t.style.background !== 'transparent' && t.style.background !== '' ? 'true' : 'false'));
   let shown = 0;
@@ -552,12 +570,14 @@ function applyPreset(key){
     document.querySelectorAll('#country-legend .tag').forEach(t=>t.addEventListener('click',()=>toggleCountry(t.dataset.country)));
   }
 
-  // Sort control — single-active; reorders instantly via CSS order.
-  document.getElementById('sort-legend').innerHTML =
+  // One row of tools: the "Filters" disclosure toggle + the sort control.
+  document.getElementById('tools-row').innerHTML =
+    `<span class="tag more" id="more-toggle" aria-expanded="false" aria-controls="more-filters">Filters ▾</span>` +
     `<span class="sort-label">Sort</span>` +
     [['score','Score'],['price','Price low→high'],['smart','💎 first']]
       .map(([k,l])=>`<span class="tag" data-sort="${k}" style="color:#8a7d6a;border-color:#8a7d6a">${l}</span>`).join('');
-  document.querySelectorAll('#sort-legend .tag').forEach(t=>t.addEventListener('click',()=>setSort(t.dataset.sort)));
+  document.querySelectorAll('#tools-row .tag[data-sort]').forEach(t=>t.addEventListener('click',()=>setSort(t.dataset.sort)));
+  document.getElementById('more-toggle').addEventListener('click', toggleMore);
 
   // Accessibility: every chip is a real, keyboard-operable toggle.
   document.querySelectorAll('.legend .tag').forEach(t=>{
@@ -601,6 +621,12 @@ const SORT_RANKS = (()=>{
   return {score: idx.slice(), price: rank(priceOrder), smart: rank(smartOrder)};
 })();
 function setSort(mode){ activeSort = mode; applyFilters(); }
+let moreOpen = false;
+function toggleMore(){
+  moreOpen = !moreOpen;
+  document.getElementById('more-filters').hidden = !moreOpen;
+  applyFilters();  // refreshes the toggle's label/arrow
+}
 setSubtitle(TOTAL);
 
 const list = document.getElementById('list');
