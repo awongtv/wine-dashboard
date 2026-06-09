@@ -49,8 +49,11 @@
   .name .vintage{color:var(--soft); font-weight:500}
   .ext{color:var(--soft); text-decoration:none; font-size:14px; margin-left:5px}
   .ext:hover{color:var(--wine)}
-  .sub{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:6px 0 11px}
+  .sub{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:6px 0 9px}
   .sub .txt{font-size:13px; color:var(--soft)}
+  /* The one-sentence verdict, lifted onto the collapsed card so every row is a
+     readable recommendation without expanding. */
+  .verdict{font:600 14.5px/1.45 var(--serif); color:var(--ink); margin:0}
   .flag{font-size:15px; line-height:1; margin-right:1px}
   .store-chip{font:700 10px/1 var(--sans); text-transform:uppercase; letter-spacing:.1em; border:1px solid; border-radius:2px; padding:3px 7px}
   /* Price tier — the "kind of buy" at this price; never competes with the score. */
@@ -97,7 +100,6 @@
   .note{margin:16px 0 0; padding-left:15px; border-left:2px solid var(--gold)}
   .note p{font-family:var(--serif); font-size:17px; line-height:1.6; color:#332e25; margin:0 0 10px}
   .note p:last-child{margin-bottom:0}
-  .note-lead{color:var(--ink); font-weight:700}
   /* "How to Shop:" — the teaching takeaway, led-in bold/black in its own paragraph. */
   .note-cue{color:var(--ink); font-weight:700}
   .section-label.shop{color:var(--soft)}
@@ -148,20 +150,27 @@ function bar(label,val,max,color){
        + `<span class="track"><span class="fill" style="width:${pct}%;background:${color}"></span></span>`
        + `<span class="bar-val">${val}/${max}</span></div>`;
 }
+function verdictLead(note){
+  // The one-sentence verdict that headlines the collapsed card. It's the first
+  // sentence of the note (up to . ! or ?); empty notes yield no headline.
+  if(!note) return '';
+  const body = note.trim();
+  return (body.match(/^.*?[.!?](?=\s|$)/) || [body])[0].trim();
+}
 function noteHTML(note){
   // v3.0 notes are three beats: a one-sentence VERDICT, the rationale, and a final
   // teaching cue (the data writes the cue with a "what to look for:" lead-in, matched
-  // below). Render the verdict as a bold lead, the rationale as prose, and the cue as
-  // its OWN paragraph led by a bold "How to Shop:". Older notes (no cue) just get the
-  // bold-lead + prose treatment, which still reads cleanly.
+  // below). The verdict now headlines the COLLAPSED card (verdictLead), so the body
+  // here leads with the rationale and ends with the cue in its own "How to Shop:"
+  // paragraph. Falls back to the full body if it can't cleanly split off the verdict.
   if(!note) return '';
   let body = note.trim(), tip = '';
   const m = body.match(/what to look for:\s*(.+)$/is);
   if(m){ tip = m[1].trim(); body = body.slice(0, m.index).trim(); }
-  // Bold the first sentence (the verdict); keep the rest as a paragraph.
+  // Drop the verdict sentence (shown in the head) and lead with the rationale.
   const lead = (body.match(/^.*?[.!?](?=\s|$)/) || [body])[0].trim();
-  const rest = body.slice(lead.length).trim();
-  let html = `<div class="note"><p><b class="note-lead">${esc(lead)}</b>${rest ? ' ' + esc(rest) : ''}</p>`;
+  const prose = body.slice(lead.length).trim() || body;
+  let html = `<div class="note"><p>${esc(prose)}</p>`;
   if(tip) html += `<p><b class="note-cue">How to Shop:</b> ${esc(tip)}</p>`;
   return html + `</div>`;
 }
@@ -188,11 +197,11 @@ const COUNTRY_NAMES = {US:'USA',FR:'France',IT:'Italy',ES:'Spain',PT:'Portugal',
 const PRICE_BANDS = [
   ['value',     'Value · < $35',     p => p != null && p < 35],
   ['primary',   'Primary · $35–68',  p => p != null && p >= 35 && p < 69],
-  ['exception', 'Exception · $69+',  p => p != null && p >= 69],
+  ['exception', 'Splurge · $69+',     p => p != null && p >= 69],
 ];
 function priceBand(p){ const b = PRICE_BANDS.find(([,,test])=>test(p)); return b ? b[0] : ''; }
 const PRICE_LABEL = Object.fromEntries(PRICE_BANDS.map(([k,l])=>[k,l]));
-const TIER_LABEL = {value:'Value', primary:'Primary', exception:'Exception'};
+const TIER_LABEL = {value:'Value', primary:'Primary', exception:'Splurge'};
 const TIER_COLORS = {value:'#3f6790', primary:'#7c2433', exception:'#9a7634'};
 
 // Each filter group holds a SET of selected values. Within a group the chips
@@ -383,11 +392,16 @@ wines.forEach((w,i)=>{
         const v=w.blic[k], cc=circleColor(v);
         return `<div class="circle" style="border-color:${cc}"><span class="cval" style="color:${cc}">${v}</span><span class="clab">${k}</span></div>`;
       }).join('') + `</div>`
-    : `<div class="subtotal">BLIC+T subtotal: ${w.blicTotal}/50 (per-criterion breakdown not available)</div>`;
+    : `<div class="subtotal">Quality subtotal: ${w.blicTotal}/50 (per-criterion breakdown not available)</div>`;
   const loops = (w.loops && w.loops.length)
     ? `<div class="section-label">What gives it an edge</div><div class="loops">`+w.loops.map(l=>`<span class="loop">${esc(l)}</span>`).join('')+`</div>`
     : `<div class="noloops">No standout edge</div>`;
+  const verdict = verdictLead(w.note);
   const note = noteHTML(w.note);
+  // Sub-score bars live in the expanded body now (next to the B·L·I·C·T circles),
+  // so the collapsed card stays clean and jargon-free.
+  const barsBlock = `<div class="bars">${bar('Quality',w.blicTotal,50,BAR_COLORS.blic)}`
+    + `${bar('Edge',w.lp,30,BAR_COLORS.loop)}${bar('Value',w.val,20,BAR_COLORS.value)}</div>`;
   const shopDesc = shopDescHTML(w.shopDesc, w.store);
   const shopLink = w.url
     ? `<a class="shop-link" href="${esc(w.url)}" target="_blank" rel="noopener">View at ${esc(storeLabel(w.store)||'shop')} ↗</a>`
@@ -408,7 +422,7 @@ wines.forEach((w,i)=>{
        <div class="meta">
          <div class="name">${esc(w.name)}${vint}${ext}</div>
          <div class="sub">${w.flag?`<span class="flag" title="origin">${w.flag}</span>`:''}${chip}${tierTag}${previewTag}${stockTag}${trTag}<span class="txt">${esc(subText)}</span></div>
-         <div class="bars">${bar('BLIC+T',w.blicTotal,50,BAR_COLORS.blic)}${bar('Edge',w.lp,30,BAR_COLORS.loop)}${bar('Value',w.val,20,BAR_COLORS.value)}</div>
+         ${verdict ? `<div class="verdict">${esc(verdict)}</div>` : ''}
        </div>
        <div class="totals">
          <div class="total" style="color:${c}">${w.total}</div>
@@ -416,7 +430,7 @@ wines.forEach((w,i)=>{
          <div class="chev">▼</div>
        </div>
      </div>
-     <div class="body">${circles}${loops}${note}${shopDesc}${shopLink}</div>`;
+     <div class="body">${circles}${barsBlock}${loops}${note}${shopDesc}${shopLink}</div>`;
   card.querySelector('.head').addEventListener('click',()=>card.classList.toggle('open'));
   list.appendChild(card);
 });
