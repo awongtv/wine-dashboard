@@ -174,10 +174,10 @@
     <div class="rule"></div>
     <div class="legend" id="preset-legend"></div>
     <div class="legend" id="type-legend"></div>
+    <div class="legend" id="store-legend"></div>
     <div class="legend" id="new-legend"></div>
     <div class="legend" id="tools-row"></div>
     <div id="more-filters" hidden>
-      <div class="legend" id="store-legend"></div>
       <div class="legend" id="stock-legend"></div>
       <div class="legend" id="band-legend"></div>
       <div class="legend" id="price-legend"></div>
@@ -415,7 +415,7 @@ function applyFilters(){
   // a preset (or a previously set filter) is never invisibly constraining the list.
   const moreT = document.getElementById('more-toggle');
   if(moreT){
-    const hiddenActive = activeStore.size + activeStock.size + activeBand.size
+    const hiddenActive = activeStock.size + activeBand.size
                        + activeCountry.size + activePrice.size + activeSmart.size;
     moreT.textContent = `Filters${hiddenActive ? ' · ' + hiddenActive : ''} ${moreOpen ? '▴' : '▾'}`;
     moreT.setAttribute('aria-expanded', String(moreOpen));
