@@ -158,7 +158,7 @@
     <div class="search" id="searchbox">
       <span class="si" aria-hidden="true">🔍</span>
       <input id="search" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
-             placeholder="Search a bottle — producer, name, or region">
+             placeholder="Search — producer, name, region, or grape">
       <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
     </div>
   </div>
@@ -263,8 +263,13 @@ const activePrice = new Set();   // 'lo' | 'mid' | 'hi'
 const activePreview = new Set(); // 'preview' — show only the hand-scored v3.0 preview wines
 const PREVIEW_COUNT = wines.filter(w=>w.preview).length;
 // Free-text search (in-store bottle lookup). Tokens are AND-matched against each
-// card's name + region + type, so "terre nere", "etna", or "nebbiolo" all find it.
+// wine's name + region + type + the shop's description — so "terre nere", "etna", a
+// grape ("nebbiolo"), or a tasting note ("graphite") all find it. The index is built
+// from data already embedded in the page, so it adds no page weight; cards reference
+// it by position via dataset.i.
 const searchEl = document.getElementById('search');
+const searchIndex = wines.map(w =>
+  `${w.name||''} ${w.region||''} ${w.type||''} ${w.shopDesc||''}`.toLowerCase());
 let searchQuery = '';
 let searchTokens = [];
 const anyActive = () => activeBand.size || activeStore.size || activeStock.size
@@ -340,7 +345,7 @@ function applyFilters(){
               && (!activeCountry.size || activeCountry.has(card.dataset.country))
               && (!activePrice.size   || activePrice.has(card.dataset.price))
               && (!activePreview.size || card.dataset.preview === '1')
-              && (searchTokens.every(t => card.dataset.search.includes(t)));
+              && (searchTokens.every(t => searchIndex[+card.dataset.i].includes(t)));
     card.style.display = show ? '' : 'none';
     if(show) shown++;
   });
@@ -504,7 +509,7 @@ wines.forEach((w,i)=>{
   card.dataset.country = w.country || '';
   card.dataset.price = priceBand(w.price);
   card.dataset.preview = w.preview ? '1' : '0';
-  card.dataset.search = `${w.name||''} ${w.region||''} ${w.type||''}`.toLowerCase();
+  card.dataset.i = i;  // position into searchIndex (built once from the embedded data)
   card.innerHTML =
     `<div class="head">
        ${img}
