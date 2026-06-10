@@ -62,8 +62,10 @@
   .head{display:flex; gap:12px; padding:17px 18px; cursor:pointer; align-items:center}
   /* Bottle image: larger than a thumbnail so it reads as a real product shot — the tall
      cards leave plenty of vertical room. The extra width is reclaimed from the head gap,
-     so the text column is barely affected. */
-  .bottle{width:60px; height:104px; object-fit:contain; flex:0 0 60px}
+     so the text column is barely affected. `cover` fills the box uniformly so every photo
+     is the SAME size regardless of how the shop framed it (contain left squarer photos
+     looking small); centered so the label stays in view if the edges crop. */
+  .bottle{width:60px; height:104px; object-fit:cover; object-position:center; flex:0 0 60px}
   .bottle.placeholder{display:flex; align-items:center; justify-content:center; font-size:34px; opacity:.3}
   .rank{flex:0 0 28px; font-family:var(--serif); font-size:19px; font-weight:600; color:var(--soft);
         text-align:center; font-variant-numeric:tabular-nums}
