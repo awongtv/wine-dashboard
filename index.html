@@ -74,10 +74,7 @@
   .sub .txt{font-size:13px; color:var(--soft)}
   /* The one-sentence verdict, lifted onto the collapsed card so every row is a
      readable recommendation without expanding. */
-  /* Clamp the collapsed-card verdict so a run-on first sentence can't stack into a tall
-     ribbon in the narrow column; the full note is in the expanded body. */
-  .verdict{font:600 14.5px/1.45 var(--serif); color:var(--ink); margin:0;
-           display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+  .verdict{font:600 14.5px/1.45 var(--serif); color:var(--ink); margin:0}
   /* Top critic score, headlined as its own chip (prestige red, distinct from the
      framework score on the right). */
   .critic-tag{font:700 10px/1 var(--sans); letter-spacing:.04em; border:1px solid rgba(124,36,51,.32);
