@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://awongtv.github.io/wine-dashboard/sitemap.xml
