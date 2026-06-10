@@ -74,7 +74,10 @@
   .sub .txt{font-size:13px; color:var(--soft)}
   /* The one-sentence verdict, lifted onto the collapsed card so every row is a
      readable recommendation without expanding. */
-  .verdict{font:600 14.5px/1.45 var(--serif); color:var(--ink); margin:0}
+  /* Clamp the collapsed-card verdict so a run-on first sentence can't stack into a tall
+     ribbon in the narrow column; the full note is in the expanded body. */
+  .verdict{font:600 14.5px/1.45 var(--serif); color:var(--ink); margin:0;
+           display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
   /* Top critic score, headlined as its own chip (prestige red, distinct from the
      framework score on the right). */
   .critic-tag{font:700 10px/1 var(--sans); letter-spacing:.04em; border:1px solid rgba(124,36,51,.32);
@@ -197,6 +200,18 @@ function bar(label,val,max,color){
   return `<div class="bar"><span class="bar-label">${label}</span>`
        + `<span class="track"><span class="fill" style="width:${pct}%;background:${color}"></span></span>`
        + `<span class="bar-val">${val}/${max}</span></div>`;
+}
+function cleanName(name){
+  // Listings arrive messy: a shop SHOUTING in all-caps, a bottle size left in the title,
+  // sometimes a duplicated volume ("750ML 750ml"). Tidy the DISPLAY name (the data is
+  // untouched): drop trailing bottle-size tokens, then Title-Case a fully-uppercase name
+  // (mixed-case names are left exactly as the shop wrote them).
+  let s = (name||'').trim();
+  s = s.replace(/\b\d+(?:[.,]\d+)?\s?(?:ml|l|cl)\b\.?/gi, ' ').replace(/\s{2,}/g,' ').trim();
+  if(s && s === s.toUpperCase() && /[A-Z]{2,}/.test(s)){
+    s = s.toLowerCase().replace(/\b\p{L}/gu, c=>c.toUpperCase());
+  }
+  return s.trim();
 }
 function verdictLead(note){
   // The one-sentence verdict that headlines the collapsed card. It's the first
@@ -466,7 +481,11 @@ wines.forEach((w,i)=>{
   const img = w.img
     ? `<img class="bottle" src="${esc(w.img)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'bottle placeholder',textContent:'🍷'}))">`
     : `<div class="bottle placeholder">🍷</div>`;
-  const vint = w.vintage ? ` <span class="vintage">${w.vintage}</span>` : '';
+  const cname = cleanName(w.name);
+  // Show the vintage chip only when it isn't already sitting in the (cleaned) name,
+  // so a name like "...Aglianico 2017" doesn't render the year twice.
+  const vint = (w.vintage && !new RegExp('\\b'+w.vintage+'\\b').test(cname))
+    ? ` <span class="vintage">${w.vintage}</span>` : '';
   const ext = w.url
     ? ` <a class="ext" href="${esc(w.url)}" target="_blank" rel="noopener" title="Open at shop" onclick="event.stopPropagation()">↗</a>`
     : '';
@@ -536,7 +555,7 @@ wines.forEach((w,i)=>{
        ${img}
        <div class="rank ${rank<=3?'top':''}">${rank}</div>
        <div class="meta">
-         <div class="name">${esc(w.name)}${vint}${ext}</div>
+         <div class="name">${esc(cname)}${vint}${ext}</div>
          <div class="sub">${w.flag?`<span class="flag" title="origin">${w.flag}</span>`:''}${chip}${tierTag}${criticTag}${previewTag}${stockTag}${trTag}<span class="txt">${esc(subText)}</span></div>
          ${verdict ? `<div class="verdict">${esc(verdict)}</div>` : ''}
          ${edgeTease}
