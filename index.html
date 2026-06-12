@@ -319,6 +319,12 @@ function norm(s){
 const searchEl = document.getElementById('search');
 const idIndex   = wines.map(w => norm(`${w.name||''} ${w.region||''} ${w.type||''} ${COUNTRY_NAMES[w.country]||w.country||''} ${w.searchTerms||''}`));
 const fullIndex = wines.map((w,i) => `${idIndex[i]} ${norm(w.shopDesc||'')}`);
+// Pre-split into word lists so matching is by WORD PREFIX, not raw substring: "cab" still
+// finds "cabernet", but "rose" no longer matches mid-word in "prosecco". Each query token
+// must be the start of some word in the index.
+const idWords   = idIndex.map(s => s.split(' '));
+const fullWords = fullIndex.map(s => s.split(' '));
+const wordHit = (words, toks) => toks.every(t => words.some(w => w.startsWith(t)));
 let searchQuery = '';   // the text the user typed (for the subtitle/empty-state)
 let searchTokens = [];  // normalized tokens (for matching)
 const anyActive = () => activeBand.size || activeStore.size || activeStock.size
@@ -384,8 +390,8 @@ function applyFilters(){
   document.querySelectorAll('.card').forEach(card=>{
     const i = +card.dataset.i;
     // Identity match (name/region/country) vs a deeper description-only match.
-    const idHit = searchTokens.every(t => idIndex[i].includes(t));
-    const hit   = idHit || searchTokens.every(t => fullIndex[i].includes(t));
+    const idHit = wordHit(idWords[i], searchTokens);
+    const hit   = idHit || wordHit(fullWords[i], searchTokens);
     const show = (!activeBand.size    || activeBand.has(card.dataset.band))
               && (!activeStore.size   || activeStore.has(card.dataset.store))
               && (!activeStock.size   || activeStock.has(card.dataset.stock))
