@@ -324,7 +324,47 @@ const fullIndex = wines.map((w,i) => `${idIndex[i]} ${norm(w.shopDesc||'')}`);
 // must be the start of some word in the index.
 const idWords   = idIndex.map(s => s.split(' '));
 const fullWords = fullIndex.map(s => s.split(' '));
-const wordHit = (words, toks) => toks.every(t => words.some(w => w.startsWith(t)));
+// Word-prefix matching, with an opt-in edit-distance<=1 fuzzy mode (typo fallback).
+function within1(a, b){       // true iff a is one edit from b (sub / insert / delete / adjacent swap)
+  if(a === b) return true;
+  const la = a.length, lb = b.length;
+  if(Math.abs(la - lb) > 1) return false;
+  let i = 0;                                          // first differing position
+  while(i < la && i < lb && a[i] === b[i]) i++;
+  let ja = la - 1, jb = lb - 1;                       // last differing position (from the end)
+  while(ja >= i && jb >= i && a[ja] === b[jb]){ ja--; jb--; }
+  const ra = ja - i + 1, rb = jb - i + 1;             // size of the differing middle in each
+  if(la === lb){
+    if(ra === 1 && rb === 1) return true;             // one substitution
+    return ra === 2 && rb === 2 && a[i] === b[i + 1] && a[i + 1] === b[i];  // one adjacent swap
+  }
+  return la > lb ? (ra === 1 && rb === 0) : (ra === 0 && rb === 1);  // one insert / delete
+}
+const tokHit = (words, t, fz) => words.some(w => w.startsWith(t) || (fz && t.length >= 4 && within1(t, w)));
+const allHit = (words, toks, fz) => toks.every(t => tokHit(words, t, fz));
+
+// Price-aware search: pull a price predicate out of the query ("under $30", "$20-40",
+// "between 20 and 40", "over 50", "cheap", or a lone "$30" ≈ ±15%). Returns the leftover
+// text so "italian red under $30" filters by price AND searches "italian red".
+let searchPriceMin = null, searchPriceMax = null;
+function parsePrice(q){
+  let s = ' ' + q.toLowerCase() + ' ', min = null, max = null, m;
+  const ok = n => n > 0 && n < 1000;            // exclude 4-digit vintages
+  if((m = s.match(/\$?\s*(\d{1,4})\s*(?:-|–|to)\s*\$?\s*(\d{1,4})/)) && ok(+m[1]) && ok(+m[2])){
+    min = +m[1]; max = +m[2]; s = s.replace(m[0], ' ');
+  } else if((m = s.match(/between\s+\$?(\d{1,4})\s+and\s+\$?(\d{1,4})/)) && ok(+m[1]) && ok(+m[2])){
+    min = +m[1]; max = +m[2]; s = s.replace(m[0], ' ');
+  }
+  if(min === null && max === null){
+    if((m = s.match(/(?:under|below|less than|up to|max|<)\s*\$?\s*(\d{1,4})/)) && ok(+m[1])){ max = +m[1]; s = s.replace(m[0], ' '); }
+    if((m = s.match(/(?:over|above|more than|at least|min|>)\s*\$?\s*(\d{1,4})/)) && ok(+m[1])){ min = +m[1]; s = s.replace(m[0], ' '); }
+    if(min === null && max === null){
+      if(/\bcheap\b/.test(s)){ max = 20; s = s.replace(/\bcheap\b/, ' '); }
+      else if((m = s.match(/\$\s*(\d{1,4})/)) && ok(+m[1])){ const n = +m[1]; min = Math.floor(n * 0.85); max = Math.ceil(n * 1.15); s = s.replace(m[0], ' '); }
+    }
+  }
+  return {min, max, rest: s.trim()};
+}
 let searchQuery = '';   // the text the user typed (for the subtitle/empty-state)
 let searchTokens = [];  // normalized tokens (for matching)
 const anyActive = () => activeBand.size || activeStore.size || activeStock.size
@@ -386,17 +426,29 @@ function applyFilters(){
     t.style.color = on ? IVORY : 'var(--soft)';
     t.style.borderColor = on ? c : 'var(--line)';
   });
+  // Strict (word-prefix) pass first; if a text search finds nothing, retry once with the
+  // typo-tolerant fuzzy matcher so "savignon" still surfaces Sauvignon rather than nothing.
+  let shown = cardPass(false);
+  if(shown === 0 && searchTokens.length) shown = cardPass(true);
+  setSubtitle(shown);
+}
+
+function cardPass(fz){
   let shown = 0;
   document.querySelectorAll('.card').forEach(card=>{
-    const i = +card.dataset.i;
-    // Identity match (name/region/country) vs a deeper description-only match.
-    const idHit = wordHit(idWords[i], searchTokens);
-    const hit   = idHit || wordHit(fullWords[i], searchTokens);
+    const i = +card.dataset.i, p = wines[i].price;
+    // Identity match (name/region/synonyms) vs a deeper description-only match.
+    const idHit = allHit(idWords[i], searchTokens, fz);
+    const hit   = idHit || allHit(fullWords[i], searchTokens, fz);
+    const priceOk = (searchPriceMin === null && searchPriceMax === null)
+              || (p != null && (searchPriceMin === null || p >= searchPriceMin)
+                            && (searchPriceMax === null || p <= searchPriceMax));
     const show = (!activeBand.size    || activeBand.has(card.dataset.band))
               && (!activeStore.size   || activeStore.has(card.dataset.store))
               && (!activeStock.size   || activeStock.has(card.dataset.stock))
               && (!activeCountry.size || activeCountry.has(card.dataset.country))
               && (!activePrice.size   || activePrice.has(card.dataset.price))
+              && priceOk
               && (searchTokens.length === 0 || hit);
     card.style.display = show ? '' : 'none';
     // Relevance: identity matches stay in score order (0); description-only matches
@@ -404,12 +456,14 @@ function applyFilters(){
     card.style.order = (show && searchTokens.length && !idHit) ? '1' : '0';
     if(show) shown++;
   });
-  setSubtitle(shown);
+  return shown;
 }
 
 function runSearch(){
   searchQuery = searchEl.value.trim();
-  searchTokens = norm(searchQuery).split(' ').filter(Boolean);
+  const pp = parsePrice(searchQuery);          // pull out "under $30" / "$20-40" / "cheap"
+  searchPriceMin = pp.min; searchPriceMax = pp.max;
+  searchTokens = norm(pp.rest).split(' ').filter(Boolean);   // remaining words = text search
   document.getElementById('searchbox').classList.toggle('has-text', searchQuery.length > 0);
   applyFilters();
 }
