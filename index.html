@@ -48,6 +48,9 @@
      this is and how to read a score. */
   .dek{font-family:var(--serif); font-size:17px; line-height:1.55; color:#4a4336; margin:0 0 16px; max-width:64ch}
   .dek b{color:var(--ink); font-weight:700}
+  /* The honest value≠taste caveat — subordinate to the dek but still readable. */
+  .disclaimer{font-family:var(--serif); font-style:italic; font-size:14.5px; line-height:1.55; color:var(--soft); margin:0 0 16px; max-width:64ch}
+  .disclaimer b{font-style:normal; color:#6b5d4a; font-weight:700}
   .freshness{font:500 12px/1.5 var(--sans); letter-spacing:.07em; text-transform:uppercase; color:var(--soft); margin:0 0 8px}
   .freshness b{color:var(--ink); font-weight:600}
   .subtitle{font-family:var(--serif); font-style:italic; color:var(--soft); font-size:16px; margin:0 0 15px}
@@ -177,7 +180,8 @@ JavaScript to browse the interactive catalogue.</p></noscript>
   <header>
     <div class="overline">Northern Virginia · Arlington &amp; Reston</div>
     <h1>The Wine Catalogue</h1>
-    <p class="dek">Every wine at <b>Arrowine</b> in Arlington and <b>The Wine Cabinet</b> in Reston, Virginia, scored for <b>value</b> — how much bottle you get for the price. A higher score means a smarter buy <i>at that price</i>, not just a fancier wine. Tap any card to see why.</p>
+    <p class="dek">Every bottle at two Northern Virginia shops — <b>Arrowine</b> in Arlington and <b>The Wine Cabinet</b> in Reston — scored for one thing: <b>value</b>. How much wine you actually get for the price, minus the markup you're paying for the label. Higher score, smarter buy <i>at that price</i>. Overwhelmed by the wall of bottles? Tap any card for the verdict.</p>
+    <p class="disclaimer">Fair warning: we score <b>value, not your taste buds</b>. A high number means you're getting your money's worth for the price — not that it'll be your new favorite. We find the smart buys in each price tier; whether it actually tastes good to you stays gloriously, stubbornly yours.</p>
     <p class="freshness" id="freshness"></p>
     <p class="subtitle" id="subtitle"></p>
   </header>
@@ -195,7 +199,7 @@ JavaScript to browse the interactive catalogue.</p></noscript>
     <div class="search" id="searchbox">
       <span class="si" aria-hidden="true">🔍</span>
       <input id="search" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
-             placeholder="Search — producer, name, region, country, or grape">
+             placeholder="Search a grape, region, producer — or “red under $20”">
       <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
     </div>
   </div>
@@ -377,13 +381,13 @@ function setSubtitle(shown){
   if(shown === 0){
     empty.hidden = false;
     empty.textContent = searchQuery
-      ? `No scored wine matches “${searchQuery}” — it may not be in the catalogue yet.`
+      ? `Nothing matches “${searchQuery}” yet. Try a grape, a region, or a price like “under $25.”`
       : 'No wines match these filters.';
   } else {
     empty.hidden = true;
   }
   if(!anyActive() && !searchQuery){
-    el.textContent = `${TOTAL} wines · ${IN_STOCK} in stock · search a bottle, or tap chips to filter`;
+    el.textContent = `${TOTAL} bottles scored · ${IN_STOCK} in stock · search one, or tap to filter`;
     return;
   }
   const label = [
