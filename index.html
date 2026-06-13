@@ -45,8 +45,12 @@
   .overline{font:600 12px/1 var(--sans); letter-spacing:.24em; text-transform:uppercase; color:var(--wine); margin:0 0 11px}
   header h1{font-family:var(--serif); font-size:56px; line-height:.98; font-weight:600; letter-spacing:-.6px; margin:0 0 15px; color:var(--ink)}
   @media (max-width:480px){ header h1{font-size:44px} }
-  /* One-line, plain-language explainer so a first-time visitor instantly gets what
-     this is and how to read a score. */
+  /* Magazine-cover lede: one punchy line, led by the catalogue size as an oxblood
+     hero figure — proof you can read in a glance, instead of a paragraph wall. */
+  .lede{font-family:var(--serif); font-size:20px; line-height:1.42; color:#332a1f; margin:2px 0 14px; max-width:60ch}
+  .lede b{color:var(--ink); font-weight:700}
+  .lede-num{color:var(--wine); font-weight:600; font-size:30px; letter-spacing:-.5px;
+            font-variant-numeric:tabular-nums; line-height:1}
   .dek{font-family:var(--serif); font-size:17px; line-height:1.55; color:#4a4336; margin:0 0 16px; max-width:64ch}
   .dek b{color:var(--ink); font-weight:700}
   /* The honest value≠taste caveat — subordinate to the dek but still readable. */
@@ -193,8 +197,8 @@ JavaScript to browse the interactive catalogue.</p></noscript>
   <header>
     <div class="overline">Northern Virginia · Arlington &amp; Reston</div>
     <h1>The Wine Catalogue</h1>
-    <p class="dek">The wine list that actually helps. Every bottle at <b>Arrowine</b> (Arlington) and <b>The Wine Cabinet</b> (Reston) scored for <b>value</b> — how much wine you get for the price, minus the markup you pay for the label. Tap any card for a verdict you can read in five seconds. Snobbery not included.</p>
-    <p class="disclaimer">Fair warning: we score <b>value, not your taste buds</b>. A high number means you're getting your money's worth for the price — not that it'll be your new favorite. We find the smart buys in each price tier; whether it actually tastes good to you stays gloriously, stubbornly yours.</p>
+    <p class="lede"><b class="lede-num" id="hero-count">—</b> bottles at <b>Arrowine</b> and <b>The Wine Cabinet</b>, every one scored for <b>value</b>. Tap any card for a verdict you can read in five seconds — snobbery not included.</p>
+    <p class="disclaimer">We score <b>value, not your taste buds</b>: a high number means your money's worth, not that you'll love it. We find the smart buy in each price tier; whether it suits your palate stays gloriously, stubbornly yours.</p>
     <p class="freshness" id="freshness"></p>
     <p class="subtitle" id="subtitle"></p>
   </header>
@@ -541,6 +545,9 @@ function togglePrice(p){ toggleSet(activePrice, p); }
         + `${flags[c]||esc(c)}</span>`).join('');
     document.querySelectorAll('#country-legend .tag').forEach(t=>t.addEventListener('click',()=>toggleCountry(t.dataset.country)));
   }
+
+  const hc=document.getElementById('hero-count');
+  if(hc) hc.textContent = TOTAL.toLocaleString();
 
   const fresh=document.getElementById('freshness');
   if(META.scraped || META.scored){
