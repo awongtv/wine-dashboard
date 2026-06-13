@@ -29,8 +29,8 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"The Wine Catalogue","url":"https://awongtv.github.io/wine-dashboard/","alternateName":"Northern Virginia Wine, Scored for Value","description":"Every wine at Arrowine (Arlington) and The Wine Cabinet (Reston), scored for value — 1,400+ bottles ranked so you know exactly what to buy. Updated weekly.","inLanguage":"en-US","about":[{"@type":"Place","name":"Arlington, Virginia"},{"@type":"Place","name":"Reston, Virginia"}]},{"@type":"ItemList","name":"Top-scored wines in Northern Virginia","numberOfItems":12,"itemListElement":[{"@type":"ListItem","position":1,"name":"Champagne Egly-Ouriet Grand Cru Blanc de Noirs NV"},{"@type":"ListItem","position":2,"name":"Tenuta Delle Terre Nere Calderara Etna Rosso Grand Cru Sottana 2023"},{"@type":"ListItem","position":3,"name":"Blandy's 10 Year Old Bual Madeira 750 ml"},{"@type":"ListItem","position":4,"name":"Champagne Tarlant La Vigne d'Antan Brut Nature Blanc de Blancs 2006"},{"@type":"ListItem","position":5,"name":"Champagne Jacques Lassaigne \"Les Vignes de Montgueux\" Blanc de Blancs Extra Brut NV"},{"@type":"ListItem","position":6,"name":"Blandy's Madeira Terrantez Vintage 1987"},{"@type":"ListItem","position":7,"name":"Luna Beberide \"Finca Luna Beberide\" 2020"},{"@type":"ListItem","position":8,"name":"Weingut Spreitzer Rheingau Oestricher Lenchen Riesling Kabinett 2022"},{"@type":"ListItem","position":9,"name":"Birichino Mokelumne River Cinsault Bechthold Vineyard \"Vignes Centenaires\" 2023"},{"@type":"ListItem","position":10,"name":"R López de Heredia Viña Cubillo Rioja Crianza 2018"},{"@type":"ListItem","position":11,"name":"Vietti Barolo 'Monvigliero' 2020"},{"@type":"ListItem","position":12,"name":"Les Foulards Rouges \"La Soif du Mal\" RED 2023"}]}]}</script>
 <style>
   :root{
-    --bg:#f4efe3; --paper:#fbf8f1; --ink:#241f19; --soft:#7c7264;
-    --line:#e4dac8; --wine:#7c2433; --gold:#9a7634;
+    --bg:#f1e7d3; --paper:#fdfaf2; --ink:#211c15; --soft:#7c7264;
+    --line:#e6dac4; --wine:#7c2433; --gold:#9a7634;
     --elite:#9a7634; --strong:#3f7d5f; --solid:#3f6790; --weak:#b15a3d;
     --blic:#c0892f; --loop:#3f8f6b; --value:#3f76b0;
     --serif:'Iowan Old Style','Hoefler Text','Apple Garamond',Palatino,'Palatino Linotype',Georgia,'Times New Roman',serif;
@@ -43,7 +43,8 @@
 
   /* Masthead */
   .overline{font:600 12px/1 var(--sans); letter-spacing:.24em; text-transform:uppercase; color:var(--wine); margin:0 0 11px}
-  header h1{font-family:var(--serif); font-size:40px; line-height:1.04; font-weight:600; letter-spacing:.3px; margin:0 0 13px; color:var(--ink)}
+  header h1{font-family:var(--serif); font-size:56px; line-height:.98; font-weight:600; letter-spacing:-.6px; margin:0 0 15px; color:var(--ink)}
+  @media (max-width:480px){ header h1{font-size:44px} }
   /* One-line, plain-language explainer so a first-time visitor instantly gets what
      this is and how to read a score. */
   .dek{font-family:var(--serif); font-size:17px; line-height:1.55; color:#4a4336; margin:0 0 16px; max-width:64ch}
@@ -82,25 +83,40 @@
 
   /* Catalogue entries */
   #list{display:flex; flex-direction:column}  /* enables search relevance ordering via `order` */
-  .card{background:var(--paper); border:1px solid var(--line); border-radius:3px; margin-bottom:14px;
-        overflow:hidden; box-shadow:0 1px 2px rgba(60,40,20,.05); transition:box-shadow .15s,border-color .15s;}
-  .card.open{border-color:var(--gold); box-shadow:0 3px 16px rgba(90,60,30,.11)}
-  .head{display:flex; gap:15px; padding:17px 18px; cursor:pointer; align-items:center}
-  .bottle{width:44px; height:72px; object-fit:contain; flex:0 0 44px}
-  .bottle.placeholder{display:flex; align-items:center; justify-content:center; font-size:26px; opacity:.3}
-  .rank{flex:0 0 28px; font-family:var(--serif); font-size:19px; font-weight:600; color:var(--soft);
-        text-align:center; font-variant-numeric:tabular-nums}
-  .rank.top{color:var(--gold)}
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:11px; margin-bottom:14px;
+        overflow:hidden; box-shadow:0 1px 2px rgba(90,60,30,.05); transition:box-shadow .18s,border-color .18s,transform .18s;}
+  .card:hover{transform:translateY(-1px); box-shadow:0 6px 20px rgba(90,60,30,.10)}
+  .card.open{border-color:var(--gold); box-shadow:0 6px 22px rgba(90,60,30,.13)}
+  .head{display:flex; gap:16px; padding:16px 18px; cursor:pointer; align-items:center}
+  .bottle{width:40px; height:66px; object-fit:contain; flex:0 0 40px}
+  .bottle.placeholder{display:flex; align-items:center; justify-content:center; font-size:24px; opacity:.3}
+  /* Hero score — the 0–100 is the loud centerpiece of every row (Pitchfork energy),
+     warmed up: big serif numeral, band label tucked underneath, hairline divider. */
+  .score{flex:0 0 auto; width:62px; text-align:center; align-self:stretch; display:flex;
+         flex-direction:column; align-items:center; justify-content:center;
+         padding-right:15px; border-right:1px solid var(--line)}
+  .score .num{font-family:var(--serif); font-size:46px; font-weight:600; line-height:.92;
+              font-variant-numeric:tabular-nums; letter-spacing:-1px}
+  .score .bandlab{font:700 9px/1.1 var(--sans); text-transform:uppercase; letter-spacing:.13em; margin-top:6px}
   .meta{flex:1 1 auto; min-width:0}
   .name{font-family:var(--serif); font-size:19px; font-weight:600; line-height:1.24; color:var(--ink)}
   .name .vintage{color:var(--soft); font-weight:500}
   .ext{color:var(--soft); text-decoration:none; font-size:14px; margin-left:5px}
   .ext:hover{color:var(--wine)}
-  .sub{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:6px 0 9px}
+  .sub{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:5px 0 8px}
   .sub .txt{font-size:13px; color:var(--soft)}
+  /* "The Critic" hierarchy: the hero score wins. On the collapsed card the
+     secondary chips read quieter (smaller, lower-contrast) so nothing competes
+     with the number; full-strength color returns when the card is expanded. */
+  .head .sub .store-chip,.head .sub .tier-tag,.head .sub .tr-tag,.head .sub .critic-tag{
+        opacity:.7; transform:scale(.94); transform-origin:left center}
+  .card.open .head .sub .store-chip,.card.open .head .sub .tier-tag,
+  .card.open .head .sub .tr-tag,.card.open .head .sub .critic-tag{opacity:1; transform:none}
+  .head .edge-row{opacity:.72}
+  .card.open .head .edge-row{opacity:1}
   /* The one-sentence verdict, lifted onto the collapsed card so every row is a
      readable recommendation without expanding. */
-  .verdict{font:600 14.5px/1.45 var(--serif); color:var(--ink); margin:0}
+  .verdict{font:500 italic 15px/1.45 var(--serif); color:#2c261d; margin:0}
   /* Top critic score, headlined as its own chip (prestige red, distinct from the
      framework score on the right). */
   .critic-tag{font:700 10px/1 var(--sans); letter-spacing:.04em; border:1px solid rgba(124,36,51,.32);
@@ -615,19 +631,18 @@ wines.forEach((w,i)=>{
   card.dataset.i = i;  // position into idIndex/fullIndex (built once from the embedded data)
   card.innerHTML =
     `<div class="head">
-       ${img}
-       <div class="rank ${rank<=3?'top':''}">${rank}</div>
+       <div class="score">
+         <div class="num" style="color:${c}">${w.total}</div>
+         <div class="bandlab" style="color:${c}">${BAND_LABEL[w.band]||w.band}</div>
+       </div>
        <div class="meta">
          <div class="name">${esc(cname)}${vint}${ext}</div>
          <div class="sub">${w.flag?`<span class="flag" title="origin">${w.flag}</span>`:''}${chip}${tierTag}${criticTag}${stockTag}${trTag}<span class="txt">${esc(subText)}</span></div>
          ${verdict ? `<div class="verdict">${esc(verdict)}</div>` : ''}
          ${edgeTease}
        </div>
-       <div class="totals">
-         <div class="total" style="color:${c}">${w.total}</div>
-         <div class="band-tag" style="color:${c};border-color:${c}">${BAND_LABEL[w.band]||w.band}</div>
-         <div class="chev">▼</div>
-       </div>
+       ${img}
+       <div class="chev">▼</div>
      </div>
      <div class="body">${circles}${barsBlock}${loops}${note}${shopDesc}${shopLink}</div>`;
   card.querySelector('.head').addEventListener('click',()=>card.classList.toggle('open'));
