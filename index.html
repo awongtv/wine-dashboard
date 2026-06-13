@@ -698,7 +698,7 @@ function togglePrice(p){ toggleSet(activePrice, p); }
   const priceKeys = PRICE_BANDS.map(([k])=>k).filter(k=>priceCounts[k]);
   if(priceKeys.length > 1){
     document.getElementById('price-legend').innerHTML =
-      priceKeys.map(k=>`<span class="tag price" data-price="${k}" title="${priceCounts[k]} wines">${PRICE_LABEL[k]}</span>`).join('');
+      priceKeys.map(k=>`<span class="tag" data-price="${k}" title="${priceCounts[k]} wines">${PRICE_LABEL[k]}</span>`).join('');
     document.querySelectorAll('#price-legend .tag').forEach(t=>t.addEventListener('click',()=>togglePrice(t.dataset.price)));
   }
 
