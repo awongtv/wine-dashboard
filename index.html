@@ -175,7 +175,13 @@
   .cell{flex:1 1 33%; min-width:110px; margin-bottom:18px}
   .cell .k{font-family:var(--mono); font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:5px}
   .cell .vv{font-family:var(--sans); font-weight:700; font-size:15px; color:var(--ink)}
-  .cta{padding:6px 32px 30px}
+  /* The shop's own listing text (winemaker notes / critics / ABV) — provenance, kept
+     muted and sans so it stays clearly subordinate to our serif verdict above. */
+  .shopdesc{padding:16px 32px 4px; border-top:1px solid var(--line); margin-top:14px}
+  .shopdesc-lab{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:10px}
+  .shopdesc p{font-family:var(--sans); font-size:13.5px; line-height:1.55; color:var(--muted2); margin:0 0 8px; max-width:580px}
+  .shopdesc p:last-child{margin-bottom:0}
+  .cta{padding:14px 32px 30px}
   .cta a{display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px; font-weight:700;
          letter-spacing:.1em; text-transform:uppercase; color:var(--on-accent); background:var(--accent);
          padding:13px 20px; border-radius:3px; text-decoration:none}
@@ -186,7 +192,7 @@
     .mast{padding:32px 20px 24px} .searchbar{padding:14px 20px 12px} .filters{padding:12px 20px 6px}
     .countline{padding:16px 20px 4px} .head{padding:16px 20px; gap:13px}
     .wordmark{font-size:clamp(52px,15vw,72px)} .sc{width:42px; font-size:34px}
-    .note,.vm,.edges,.grid,.cta{padding-left:20px; padding-right:20px}
+    .note,.vm,.edges,.grid,.shopdesc,.cta{padding-left:20px; padding-right:20px}
     .verdict{max-width:none}
   }
 </style>
@@ -468,8 +474,9 @@ function shopDescHTML(desc, store){
   if(!desc) return '';
   const rows = desc.split(' | ').map(s=>s.trim()).filter(Boolean)
     .map(s=>`<p>${esc(s)}</p>`).join('');
+  if(!rows) return '';
   const who = storeLabel(store) || 'the shop';
-  return `<div class="section-label shop">From ${esc(who)}</div><div class="shopdesc">${rows}</div>`;
+  return `<div class="shopdesc"><div class="shopdesc-lab">From ${esc(who)}</div>${rows}</div>`;
 }
 
 const TOTAL = wines.length;
@@ -813,6 +820,7 @@ function buildBody(i){
     + (w.trackRecord?cell('Track record', esc(w.trackRecord.charAt(0).toUpperCase()+w.trackRecord.slice(1))):'')
     + (w.critic?cell('Top critic', '★ '+esc(String(w.critic.score))):'')
     + `</div>`;
+  const shopDesc = shopDescHTML(w.shopDesc, w.store);   // the shop's own blurb, for provenance
   const cta = w.url
     ? `<div class="cta"><a href="${esc(w.url)}" target="_blank" rel="noopener">View at ${esc(shopLab)} ↗</a></div>`
     : '';
@@ -821,6 +829,7 @@ function buildBody(i){
     <div class="vm"><div class="vm-lab"><span>Value score</span><span class="v">${w.total} / 100 · ${qual}</span></div><div class="vm-bar"><span style="width:${pct}%"></span></div></div>
     ${edges}
     ${grid}
+    ${shopDesc}
     ${cta}
   </div>`;
 }
