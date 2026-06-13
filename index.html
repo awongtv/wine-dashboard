@@ -85,7 +85,7 @@
   .tag.price{color:var(--soft); border-color:var(--line); font-variant-numeric:tabular-nums}   /* price-range chips; active color set in JS */
 
   /* Catalogue entries */
-  #list{display:flex; flex-direction:column}  /* enables search relevance ordering via `order` */
+  #list{display:flex; flex-direction:column}  /* cards stream in DOM (= score/relevance) order */
   .card{background:var(--paper); border:1px solid var(--line); border-radius:11px; margin-bottom:14px;
         overflow:hidden; box-shadow:0 1px 2px rgba(90,60,30,.05); transition:box-shadow .18s,border-color .18s,transform .18s;}
   .card:hover{transform:translateY(-1px); box-shadow:0 6px 20px rgba(90,60,30,.10)}
@@ -604,35 +604,37 @@ function applyFilters(){
   });
   // Strict (word-prefix) pass first; if a text search finds nothing, retry once with the
   // typo-tolerant fuzzy matcher so "savignon" still surfaces Sauvignon rather than nothing.
-  let shown = cardPass(false);
-  if(shown === 0 && searchTokens.length) shown = cardPass(true);
-  setSubtitle(shown);
+  let v = computeVisible(false);
+  if(v.length === 0 && searchTokens.length) v = computeVisible(true);
+  visible = v;
+  renderReset();             // repaint the window from the top of the new result set
+  setSubtitle(visible.length);
 }
 
-function cardPass(fz){
-  let shown = 0;
-  document.querySelectorAll('.card').forEach(card=>{
-    const i = +card.dataset.i, p = wines[i].price;
+// Compute the ordered list of wine indices to show, straight from the DATA (not the
+// DOM) — so filtering/search is never limited to the cards currently rendered in the
+// window. Identity matches keep score order; description-only matches sink beneath them.
+function computeVisible(fz){
+  const idMatch = [], descMatch = [];
+  for(let i=0;i<wines.length;i++){
+    const w = wines[i], p = w.price;
     // Identity match (name/region/synonyms) vs a deeper description-only match.
     const idHit = allHit(idWords[i], searchTokens, fz);
     const hit   = idHit || allHit(fullWords[i], searchTokens, fz);
     const priceOk = (searchPriceMin === null && searchPriceMax === null)
               || (p != null && (searchPriceMin === null || p >= searchPriceMin)
                             && (searchPriceMax === null || p <= searchPriceMax));
-    const show = (!activeBand.size    || activeBand.has(card.dataset.band))
-              && (!activeStore.size   || activeStore.has(card.dataset.store))
-              && (!activeStock.size   || activeStock.has(card.dataset.stock))
-              && (!activeCountry.size || activeCountry.has(card.dataset.country))
-              && (!activePrice.size   || activePrice.has(card.dataset.price))
+    const show = (!activeBand.size    || activeBand.has(w.band))
+              && (!activeStore.size   || activeStore.has(w.store||''))
+              && (!activeStock.size   || activeStock.has(w.inStock?'in':'out'))
+              && (!activeCountry.size || activeCountry.has(w.country||''))
+              && (!activePrice.size   || activePrice.has(priceBand(w.price)))
               && priceOk
               && (searchTokens.length === 0 || hit);
-    card.style.display = show ? '' : 'none';
-    // Relevance: identity matches stay in score order (0); description-only matches
-    // sink below them (1). With no search, everything is 0 -> pure score order.
-    card.style.order = (show && searchTokens.length && !idHit) ? '1' : '0';
-    if(show) shown++;
-  });
-  return shown;
+    if(!show) continue;
+    (searchTokens.length && !idHit ? descMatch : idMatch).push(i);
+  }
+  return idMatch.concat(descMatch);
 }
 
 function runSearch(){
@@ -713,13 +715,25 @@ function togglePrice(p){ toggleSet(activePrice, p); }
 })();
 
 wines.sort((a,b)=>b.total-a.total);
-setSubtitle(TOTAL);
 
 const list = document.getElementById('list');
-wines.forEach((w,i)=>{
-  const rank=i+1, c=BAND_COLORS[w.band]||'#b15a3d';
+// Render budget (Core Web Vitals): the DOM holds only a WINDOW of cards, never all
+// ~1,500 at once. The first paint renders INITIAL cards; an IntersectionObserver then
+// streams BATCHes in as you scroll. Filtering/search runs over the data (computeVisible)
+// and repaints the window, so a match is never limited to what's currently on screen.
+const INITIAL = 150, BATCH = 80;
+let visible = [];   // wine indices passing the current filter, in display order
+let rendered = 0;   // how many of `visible` are currently mounted in the DOM
+
+const sentinel = document.createElement('div');
+sentinel.id = 'sentinel';
+list.after(sentinel);
+
+// Build a single card's HEAD only; the heavy expanded body is mounted on first open.
+function buildCard(i){
+  const w = wines[i], c = BAND_COLORS[w.band]||'#b15a3d';
   const img = w.img
-    ? `<img class="bottle" src="${esc(w.img)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'bottle placeholder',textContent:'🍷'}))">`
+    ? `<img class="bottle" src="${esc(w.img)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'bottle placeholder',textContent:'🍷'}))">`
     : `<div class="bottle placeholder">🍷</div>`;
   const cname = cleanName(w.name);
   // Show the vintage chip only when it isn't already sitting in the (cleaned) name,
@@ -750,31 +764,12 @@ wines.forEach((w,i)=>{
     : '';
   const unit = (w.volumeMl && w.volumeMl!=750 && w.unitPrice!=null) ? ('~$'+w.unitPrice+'/750ml') : '';
   const subText = [w.region, (w.price!=null?('$'+w.price):''), unit, (w.abv?(w.abv+' ABV'):'')].filter(Boolean).join(' · ');
-
-  const circles = w.blic
-    ? `<div class="section-label">Quality — B · L · I · C · T</div><div class="circles">` + ['B','L','I','C','T'].map(k=>{
-        const v=w.blic[k], cc=circleColor(v);
-        return `<div class="circle" style="border-color:${cc}"><span class="cval" style="color:${cc}">${v}</span><span class="clab">${k}</span></div>`;
-      }).join('') + `</div>`
-    : `<div class="subtotal">Quality subtotal: ${w.blicTotal}/50 (per-criterion breakdown not available)</div>`;
-  const loops = (w.loops && w.loops.length)
-    ? `<div class="section-label">What gives it an edge</div><div class="loops">`+w.loops.map(l=>`<span class="loop">${esc(l)}</span>`).join('')+`</div>`
-    : `<div class="noloops">No standout edge</div>`;
   const verdict = verdictLead(w.note);
   // Edge teaser — surface the top 1-2 edge tags on the collapsed card as a discovery
   // hook; the full labeled list lives in the body and replaces this once expanded.
   const edgeTease = (w.loops && w.loops.length)
     ? `<div class="edge-row">` + w.loops.slice(0,2).map(l=>`<span class="edge-mini">${esc(l)}</span>`).join('')
       + (w.loops.length>2 ? `<span class="edge-more">+${w.loops.length-2}</span>` : '') + `</div>`
-    : '';
-  const note = noteHTML(w.note);
-  // Sub-score bars live in the expanded body now (next to the B·L·I·C·T circles),
-  // so the collapsed card stays clean and jargon-free.
-  const barsBlock = `<div class="bars">${bar('Quality',w.blicTotal,50,BAR_COLORS.blic)}`
-    + `${bar('Edge',w.lp,30,BAR_COLORS.loop)}${bar('Value',w.val,20,BAR_COLORS.value)}</div>`;
-  const shopDesc = shopDescHTML(w.shopDesc, w.store);
-  const shopLink = w.url
-    ? `<a class="shop-link" href="${esc(w.url)}" target="_blank" rel="noopener">View at ${esc(storeLabel(w.store)||'shop')} ↗</a>`
     : '';
 
   const card=document.createElement('article');
@@ -799,11 +794,62 @@ wines.forEach((w,i)=>{
        </div>
        ${img}
        <div class="chev">▼</div>
-     </div>
-     <div class="body">${circles}${barsBlock}${loops}${note}${shopDesc}${shopLink}</div>`;
-  card.querySelector('.head').addEventListener('click',()=>card.classList.toggle('open'));
-  list.appendChild(card);
-});
+     </div>`;
+  // Mount the heavy body lazily on first open: a collapsed card costs only its head.
+  card.querySelector('.head').addEventListener('click',()=>{
+    if(card.dataset.built!=='1'){ card.insertAdjacentHTML('beforeend', buildBody(i)); card.dataset.built='1'; }
+    card.classList.toggle('open');
+  });
+  return card;
+}
+
+// The expanded body — B·L·I·C·T circles, sub-score bars, edge tags, note, shop blurb —
+// built the first time a card is opened, so collapsed cards stay light.
+function buildBody(i){
+  const w = wines[i];
+  const circles = w.blic
+    ? `<div class="section-label">Quality — B · L · I · C · T</div><div class="circles">` + ['B','L','I','C','T'].map(k=>{
+        const v=w.blic[k], cc=circleColor(v);
+        return `<div class="circle" style="border-color:${cc}"><span class="cval" style="color:${cc}">${v}</span><span class="clab">${k}</span></div>`;
+      }).join('') + `</div>`
+    : `<div class="subtotal">Quality subtotal: ${w.blicTotal}/50 (per-criterion breakdown not available)</div>`;
+  const loops = (w.loops && w.loops.length)
+    ? `<div class="section-label">What gives it an edge</div><div class="loops">`+w.loops.map(l=>`<span class="loop">${esc(l)}</span>`).join('')+`</div>`
+    : `<div class="noloops">No standout edge</div>`;
+  const note = noteHTML(w.note);
+  // Sub-score bars live in the expanded body now (next to the B·L·I·C·T circles),
+  // so the collapsed card stays clean and jargon-free.
+  const barsBlock = `<div class="bars">${bar('Quality',w.blicTotal,50,BAR_COLORS.blic)}`
+    + `${bar('Edge',w.lp,30,BAR_COLORS.loop)}${bar('Value',w.val,20,BAR_COLORS.value)}</div>`;
+  const shopDesc = shopDescHTML(w.shopDesc, w.store);
+  const shopLink = w.url
+    ? `<a class="shop-link" href="${esc(w.url)}" target="_blank" rel="noopener">View at ${esc(storeLabel(w.store)||'shop')} ↗</a>`
+    : '';
+  return `<div class="body">${circles}${barsBlock}${loops}${note}${shopDesc}${shopLink}</div>`;
+}
+
+// Append the next chunk of the visible window (INITIAL on the first call, BATCH after).
+function renderMore(){
+  if(rendered >= visible.length){ sentinel.style.display='none'; return; }
+  const frag = document.createDocumentFragment();
+  const end = Math.min(rendered + (rendered ? BATCH : INITIAL), visible.length);
+  for(let k=rendered;k<end;k++) frag.appendChild(buildCard(visible[k]));
+  list.appendChild(frag);
+  rendered = end;
+  if(rendered >= visible.length){ sentinel.style.display='none'; io.unobserve(sentinel); }
+  // Re-arm the observer so it re-evaluates after layout (it won't re-fire on its own
+  // while the sentinel stays intersecting after we grow the list above it).
+  else { sentinel.style.display=''; io.unobserve(sentinel); requestAnimationFrame(()=>io.observe(sentinel)); }
+}
+
+// Reset the window to the top of the current visible set and paint the first chunk.
+function renderReset(){ list.textContent=''; rendered=0; renderMore(); }
+
+const io = new IntersectionObserver(entries=>{
+  if(entries.some(e=>e.isIntersecting)) renderMore();
+}, {rootMargin:'800px 0px'});
+
+applyFilters();   // initial paint: no filters -> full set in score order, windowed
 </script>
 </body>
 </html>
