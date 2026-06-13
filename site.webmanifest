@@ -1,0 +1,12 @@
+{
+  "name": "Bottle Math — NoVA",
+  "short_name": "Bottle Math",
+  "icons": [
+    { "src": "favicon-48.png", "sizes": "48x48", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#1b1013",
+  "background_color": "#1b1013",
+  "display": "standalone"
+}
