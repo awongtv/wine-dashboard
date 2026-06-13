@@ -62,6 +62,10 @@
   .goldrule{height:3px; width:64px; background:var(--accent); margin:24px 0 18px}
   .dek{font-size:16px; line-height:1.55; color:var(--soft); max-width:560px; margin:0}
   .dek b{color:var(--ink); font-weight:600}
+  /* The honest value≠taste caveat — subordinate to the dek but still readable. */
+  .disclaimer{font-family:var(--serif); font-style:italic; font-size:14px; line-height:1.55;
+              color:var(--faint); max-width:560px; margin:14px 0 0}
+  .disclaimer b{font-style:normal; color:var(--soft); font-weight:600}
 
   /* Controls (sticky) */
   /* Only the slim search bar pins to the top; the masthead and the filter pills scroll
@@ -107,7 +111,9 @@
   /* Compact row */
   .head{display:flex; align-items:center; gap:16px; padding:18px 32px; cursor:pointer;
         border-bottom:1px solid var(--line)}
-  .card.open .head{display:none}
+  /* Open = accordion: the compact row STAYS, the detail drops in below it (like the
+     pre-redesign site). A gold top-line + panel tint mark the open card. */
+  .card.open{background:var(--panel); box-shadow:inset 0 2px 0 var(--accent)}
   .sc{flex-shrink:0; width:48px; text-align:center; font-family:var(--sans); font-weight:900;
       font-size:40px; line-height:.82}
   /* Bottle thumbnail — a pre-normalized WebP with the cream tile baked in (see
@@ -139,21 +145,9 @@
   .card.oos .head{opacity:.55}
   .card.oos .thumb-chip{filter:grayscale(.7)}
 
-  /* Expanded panel */
+  /* Expanded detail — drops in below the still-visible compact row */
   .body{display:none}
-  .card.open .body{display:block; background:var(--panel); border-top:2px solid var(--accent);
-        border-bottom:1px solid var(--line)}
-  .exp-head{display:flex; align-items:flex-start; gap:18px; padding:26px 32px 18px; cursor:pointer}
-  .scbig{flex-shrink:0; width:64px; text-align:center}
-  .scbig .n{font-family:var(--sans); font-weight:900; font-size:64px; line-height:.8; color:var(--ink)}
-  .scbig .t{font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase;
-            color:var(--accent); margin-top:6px}
-  .thumb-chip--lg{width:120px; height:192px; border-radius:8px}
-  .hmain{flex:1; min-width:0}
-  .hmeta{display:flex; align-items:center; gap:9px; margin-bottom:9px; flex-wrap:wrap}
-  .nmbig{font-family:var(--sans); font-weight:800; font-size:24px; line-height:1.12; color:var(--ink); letter-spacing:-.01em}
-  .pbig{font-family:var(--sans); font-weight:900; font-size:26px; color:var(--accent)}
-  .close{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); margin-top:5px}
+  .card.open .body{display:block; padding-top:10px}
   .note{margin:0; padding:0 32px 8px}
   .note p{font-family:var(--serif); font-size:17px; line-height:1.55; color:var(--soft); margin:0 0 12px; max-width:580px}
   .note p:last-child{margin-bottom:0}
@@ -184,7 +178,7 @@
     .mast{padding:32px 20px 24px} .searchbar{padding:14px 20px 12px} .filters{padding:12px 20px 6px}
     .countline{padding:16px 20px 4px} .head{padding:16px 20px; gap:13px}
     .wordmark{font-size:clamp(52px,15vw,72px)} .sc{width:42px; font-size:34px}
-    .exp-head,.note,.vm,.edges,.grid,.cta{padding-left:20px; padding-right:20px}
+    .note,.vm,.edges,.grid,.cta{padding-left:20px; padding-right:20px}
     .verdict{max-width:none}
   }
 </style>
@@ -200,12 +194,14 @@ JavaScript to browse the interactive catalogue.</p></noscript>
     <h1 class="wordmark">Bottle Math</h1>
     <div class="goldrule"></div>
     <p class="dek">Every bottle at <b>Arrowine</b> (Arlington) and <b>The Wine Cabinet</b> (Reston), ranked by how much wine you get for the price — not by the name on the label. Tap any bottle for the verdict.</p>
+    <p class="disclaimer">Fair warning: we score <b>value, not your taste buds</b>. A high number means you're getting your money's worth for the price — not that it'll be your new favorite. We find the smart buys in each price tier; whether it actually tastes good to you stays gloriously, stubbornly yours.</p>
   </header>
   <!-- The in-store lookup pins to the top; the filter groups below it scroll away. -->
   <div class="searchbar">
     <div class="search" id="searchbox">
       <span class="lens" aria-hidden="true"></span>
       <input id="search" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
+             autocapitalize="off" autocorrect="off" spellcheck="false"
              placeholder="Search a bottle, region, or grape">
       <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
     </div>
@@ -782,15 +778,7 @@ function buildCard(i){
 // meta grid, and the shop CTA — built the first time a card is opened.
 function buildBody(i){
   const w = wines[i];
-  const ty = wineType(w);
-  const cname = cleanName(w.name);
-  const vint = (w.vintage && !new RegExp('\\b'+w.vintage+'\\b').test(cname))
-    ? ` <span class="vintage">${w.vintage}</span>` : '';
   const shopLab = storeLabel(w.store)||'shop';
-  const thumb = w.thumb
-    ? `<div class="thumb-chip thumb-chip--lg"><img src="${esc(w.thumb)}" alt="" loading="lazy" onerror="this.style.display='none'"></div>`
-    : `<div class="thumb-chip thumb-chip--lg placeholder">🍷</div>`;
-  const priceDisp = w.price!=null ? '$'+Math.round(w.price) : '—';
   const note = noteHTML(w.note);
   const pct = Math.max(0,Math.min(100,w.total));
   const qual = (BAND_LABEL[w.band]||'') + ' quality';
@@ -814,15 +802,6 @@ function buildBody(i){
     ? `<div class="cta"><a href="${esc(w.url)}" target="_blank" rel="noopener">View at ${esc(shopLab)} ↗</a></div>`
     : '';
   return `<div class="body">
-    <div class="exp-head">
-      <div class="scbig"><div class="n">${w.total}</div><div class="t">${BAND_LABEL[w.band]||w.band}</div></div>
-      ${thumb}
-      <div class="hmain">
-        <div class="hmeta"><span class="kind"><span class="dot" style="background:${ty.color}"></span>${ty.label}</span><span class="reg">${w.region?esc(w.region)+' · ':''}${esc(shopLab)}</span></div>
-        <div class="nmbig">${esc(cname)}${vint}</div>
-      </div>
-      <div class="right"><div class="pbig">${priceDisp}</div><div class="close">Close ▴</div></div>
-    </div>
     ${note}
     <div class="vm"><div class="vm-lab"><span>Value score</span><span class="v">${w.total} / 100 · ${qual}</span></div><div class="vm-bar"><span style="width:${pct}%"></span></div></div>
     ${edges}
@@ -832,7 +811,8 @@ function buildBody(i){
 }
 
 // Expand/collapse — only one card open at a time. The body is built lazily on first open
-// and its header click collapses the card; opening a card closes any other that's open.
+// Opening a card closes any other that's open. The compact row stays the toggle (its
+// click handler is wired in buildCard), so clicking it again collapses the card.
 function collapseOpen(except){ const o=list.querySelector('.card.open'); if(o && o!==except) o.classList.remove('open'); }
 function toggleCard(card,i){
   const willOpen = !card.classList.contains('open');
@@ -840,7 +820,6 @@ function toggleCard(card,i){
     if(card.dataset.built!=='1'){
       card.insertAdjacentHTML('beforeend', buildBody(i));
       card.dataset.built='1';
-      card.querySelector('.exp-head').addEventListener('click',()=>toggleCard(card,i));
     }
     collapseOpen(card);
   }
