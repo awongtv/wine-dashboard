@@ -548,6 +548,9 @@ function within1(a, b){       // true iff a is one edit from b (sub / insert / d
 }
 const tokHit = (words, t, fz) => words.some(w => w.startsWith(t) || (fz && t.length >= 4 && within1(t, w)));
 const allHit = (words, toks, fz) => toks.every(t => tokHit(words, t, fz));
+// Whole-word matches outrank mere prefixes, so "rose" surfaces actual rosé wines before
+// a producer like "Roses de Jeanne" (where "rose" only prefixes the word "roses").
+const allExact = (words, toks) => toks.every(t => words.includes(t));
 
 // Price-aware search: pull a price predicate out of the query ("under $30", "$20-40",
 // "between 20 and 40", "over 50", "cheap", or a lone "$30" ≈ ±15%). Returns the leftover
@@ -627,10 +630,11 @@ function applyFilters(){
 // DOM) — so filtering/search is never limited to the cards currently rendered in the
 // window. Identity matches keep score order; description-only matches sink beneath them.
 function computeVisible(fz){
-  const idMatch = [], descMatch = [];
+  // Three relevance tiers (each kept in score order): an exact whole-word identity match,
+  // a prefix identity match (name/region/synonyms), then a deeper description-only match.
+  const exactMatch = [], idMatch = [], descMatch = [];
   for(let i=0;i<wines.length;i++){
     const w = wines[i], p = w.price;
-    // Identity match (name/region/synonyms) vs a deeper description-only match.
     const idHit = allHit(idWords[i], searchTokens, fz);
     const hit   = idHit || allHit(fullWords[i], searchTokens, fz);
     const priceOk = (searchPriceMin === null && searchPriceMax === null)
@@ -644,9 +648,12 @@ function computeVisible(fz){
               && priceOk
               && (searchTokens.length === 0 || hit);
     if(!show) continue;
-    (searchTokens.length && !idHit ? descMatch : idMatch).push(i);
+    if(searchTokens.length === 0) { exactMatch.push(i); continue; }   // no search -> pure score order
+    if(idHit && !fz && allExact(idWords[i], searchTokens)) exactMatch.push(i);
+    else if(idHit) idMatch.push(i);
+    else descMatch.push(i);
   }
-  return idMatch.concat(descMatch);
+  return exactMatch.concat(idMatch, descMatch);
 }
 
 function runSearch(){
