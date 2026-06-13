@@ -141,7 +141,8 @@
   .kind{display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9.5px;
         letter-spacing:.07em; text-transform:uppercase; color:var(--muted2)}
   .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0}
-  .reg{font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted2)}
+  .reg{font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted2); display:inline-flex; align-items:center}
+  .reg .flag{font-size:12px; line-height:1; margin-right:2px; letter-spacing:0}
   .soldout{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em;
            text-transform:uppercase; color:#c0726f}
   .verdict{font-family:var(--serif); font-style:italic; font-size:13.5px; line-height:1.45;
@@ -782,7 +783,7 @@ function buildCard(i){
          <div class="meta">
            <span class="badge" style="background:${badgeBg}">${BAND_LABEL[w.band]||w.band}</span>
            <span class="kind"><span class="dot" style="background:${ty.color}"></span>${ty.label}</span>
-           ${w.region?`<span class="reg">${esc(w.region)}</span>`:''}
+           ${w.flag||w.region?`<span class="reg">${w.flag?`<span class="flag" title="origin">${w.flag}</span> `:''}${esc(w.region||'')}</span>`:''}
            ${sold}
          </div>
          ${verdict ? `<div class="verdict">${esc(verdict)}</div>` : ''}
