@@ -523,13 +523,14 @@ function norm(s){
     .replace(/[^a-z0-9]+/g,' ').trim();                            // other punctuation -> space
 }
 const searchEl = document.getElementById('search');
+// Search matches a bottle's IDENTITY only — name, region, type, country, and the curated
+// grape/region synonyms (searchTerms). We deliberately do NOT full-text-search the shop's
+// tasting-note prose: that made "rose" surface a red whose notes mention "rose petals".
 const idIndex   = wines.map(w => norm(`${w.name||''} ${w.region||''} ${w.type||''} ${COUNTRY_NAMES[w.country]||w.country||''} ${w.searchTerms||''}`));
-const fullIndex = wines.map((w,i) => `${idIndex[i]} ${norm(w.shopDesc||'')}`);
 // Pre-split into word lists so matching is by WORD PREFIX, not raw substring: "cab" still
 // finds "cabernet", but "rose" no longer matches mid-word in "prosecco". Each query token
 // must be the start of some word in the index.
 const idWords   = idIndex.map(s => s.split(' '));
-const fullWords = fullIndex.map(s => s.split(' '));
 // Word-prefix matching, with an opt-in edit-distance<=1 fuzzy mode (typo fallback).
 function within1(a, b){       // true iff a is one edit from b (sub / insert / delete / adjacent swap)
   if(a === b) return true;
@@ -628,15 +629,13 @@ function applyFilters(){
 
 // Compute the ordered list of wine indices to show, straight from the DATA (not the
 // DOM) — so filtering/search is never limited to the cards currently rendered in the
-// window. Identity matches keep score order; description-only matches sink beneath them.
+// window. Two relevance tiers, both over a bottle's identity: exact whole-word matches
+// first, then prefix matches; each kept in score order.
 function computeVisible(fz){
-  // Three relevance tiers (each kept in score order): an exact whole-word identity match,
-  // a prefix identity match (name/region/synonyms), then a deeper description-only match.
-  const exactMatch = [], idMatch = [], descMatch = [];
+  const exactMatch = [], prefixMatch = [];
   for(let i=0;i<wines.length;i++){
     const w = wines[i], p = w.price;
     const idHit = allHit(idWords[i], searchTokens, fz);
-    const hit   = idHit || allHit(fullWords[i], searchTokens, fz);
     const priceOk = (searchPriceMin === null && searchPriceMax === null)
               || (p != null && (searchPriceMin === null || p >= searchPriceMin)
                             && (searchPriceMax === null || p <= searchPriceMax));
@@ -646,14 +645,13 @@ function computeVisible(fz){
               && (!activeCountry.size || activeCountry.has(w.country||''))
               && (!activePrice.size   || activePrice.has(priceBand(w.price)))
               && priceOk
-              && (searchTokens.length === 0 || hit);
+              && (searchTokens.length === 0 || idHit);
     if(!show) continue;
     if(searchTokens.length === 0) { exactMatch.push(i); continue; }   // no search -> pure score order
-    if(idHit && !fz && allExact(idWords[i], searchTokens)) exactMatch.push(i);
-    else if(idHit) idMatch.push(i);
-    else descMatch.push(i);
+    if(!fz && allExact(idWords[i], searchTokens)) exactMatch.push(i);
+    else prefixMatch.push(i);
   }
-  return exactMatch.concat(idMatch, descMatch);
+  return exactMatch.concat(prefixMatch);
 }
 
 function runSearch(){
