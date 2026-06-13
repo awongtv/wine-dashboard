@@ -66,6 +66,14 @@
   .disclaimer{font-family:var(--serif); font-style:italic; font-size:14px; line-height:1.55;
               color:var(--faint); max-width:560px; margin:14px 0 0}
   .disclaimer b{font-style:normal; color:var(--soft); font-weight:600}
+  .howlink{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin:16px 0 0}
+  .howlink a{color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(217,164,65,.4); padding-bottom:2px}
+  .howlink a:hover{border-color:var(--accent)}
+  .foot{padding:30px 32px 50px; border-top:1px solid var(--line); margin-top:14px;
+        font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+        color:var(--muted); display:flex; flex-wrap:wrap; gap:9px 18px; align-items:center}
+  .foot a{color:var(--soft); text-decoration:none; border-bottom:1px solid var(--edge); padding-bottom:2px}
+  .foot a:hover{color:var(--accent); border-color:var(--accent)}
 
   /* Controls (sticky) */
   /* Only the slim search bar pins to the top; the masthead and the filter pills scroll
@@ -195,6 +203,7 @@ JavaScript to browse the interactive catalogue.</p></noscript>
     <div class="goldrule"></div>
     <p class="dek">Every bottle at <b>Arrowine</b> (Arlington) and <b>The Wine Cabinet</b> (Reston), ranked by how much wine you get for the price — not by the name on the label. Tap any bottle for the verdict.</p>
     <p class="disclaimer">Fair warning: we score <b>value, not your taste buds</b>. A high number means you're getting your money's worth for the price — not that it'll be your new favorite. We find the smart buys in each price tier; whether it actually tastes good to you stays gloriously, stubbornly yours.</p>
+    <p class="howlink"><a href="how-it-works.html">How the score works →</a></p>
   </header>
   <!-- The in-store lookup pins to the top; the filter groups below it scroll away. -->
   <div class="searchbar">
@@ -370,6 +379,12 @@ JavaScript to browse the interactive catalogue.</p></noscript>
 <p>Scores rate value for the price (0–100): 70+ Elite, 60+ Strong, 50+ Solid. Updated weekly. Enable JavaScript for the interactive, searchable catalogue.</p></section>
   <main id="list"></main>
   <p class="empty" id="empty" hidden></p>
+  <footer class="foot">
+    <a href="how-it-works.html">How the score works</a>
+    <span>Arrowine · Arlington</span>
+    <span>The Wine Cabinet · Reston</span>
+    <span>Updated weekly · value, not hype</span>
+  </footer>
 </div>
 <script>
 // The crawler-only static index is replaced by the live interactive list below.

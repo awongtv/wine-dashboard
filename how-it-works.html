@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Bottle Math works — our wine value-scoring method</title>
+<meta name="description" content="How we score every wine for value, not taste: a plain-language 100-point system of Quality, Edge, and Value, used to rank every bottle at two Northern Virginia shops.">
+<link rel="canonical" href="https://awongtv.github.io/wine-dashboard/how-it-works.html">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#1b1013">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Bottle Math - NoVA">
+<meta property="og:title" content="How Bottle Math works">
+<meta property="og:description" content="The 100-point value score, in plain language: Quality + Edge + Value. We score buy-worthiness, not your taste buds.">
+<meta property="og:url" content="https://awongtv.github.io/wine-dashboard/how-it-works.html">
+<meta property="og:image" content="https://awongtv.github.io/wine-dashboard/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://awongtv.github.io/wine-dashboard/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="https://awongtv.github.io/wine-dashboard/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="https://awongtv.github.io/wine-dashboard/favicon-32.png">
+<link rel="apple-touch-icon" href="https://awongtv.github.io/wine-dashboard/apple-touch-icon.png">
+<link rel="manifest" href="https://awongtv.github.io/wine-dashboard/site.webmanifest">
+<style>
+  :root{
+    --bg:#160a0d; --surface:#1a0d10; --panel:#1f1014; --line:#2c181d; --edge:#4a2c33;
+    --ink:#f5ece0; --soft:#d9c4bc; --faint:#a89089; --muted:#8a6f68; --muted2:#9b8079;
+    --dim:#6e5650; --accent:#d9a441; --accent-dark:#b07d2b; --on-accent:#160a0d;
+    --sans:'Archivo',system-ui,-apple-system,Arial,sans-serif; --serif:'Newsreader',Georgia,serif; --mono:'Space Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.6; -webkit-font-smoothing:antialiased}
+  .col{max-width:720px; margin:0 auto; padding:40px 32px 80px}
+  a{color:var(--accent); text-decoration:none}
+  .back{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .back:hover{color:var(--accent)}
+  .kick{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--accent); margin:26px 0 14px}
+  h1{font-family:var(--sans); font-weight:900; font-size:54px; line-height:.92; letter-spacing:-.025em; margin:0 0 18px}
+  @media (max-width:520px){ h1{font-size:42px} .col{padding:32px 20px 64px} }
+  .lead{font-size:18px; line-height:1.6; color:var(--soft); max-width:600px; margin:0}
+  .lead b{color:var(--ink); font-weight:600}
+  .goldrule{height:3px; width:64px; background:var(--accent); margin:26px 0}
+  h2{font-family:var(--sans); font-weight:800; font-size:24px; letter-spacing:-.01em; margin:42px 0 8px}
+  p{font-size:16px; color:var(--soft); max-width:620px; margin:12px 0}
+  p b{color:var(--ink); font-weight:600}
+  .meter{display:flex; height:12px; border-radius:3px; overflow:hidden; margin:18px 0 8px; border:1px solid var(--line)}
+  .meter span{display:block; font:0/0 a}
+  .meterkey{display:flex; gap:18px; flex-wrap:wrap; font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+  .meterkey i{font-style:normal} .dot{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:middle}
+  .part{border-left:2px solid var(--edge); padding:2px 0 2px 18px; margin:22px 0}
+  .part .pts{font-family:var(--mono); font-size:11px; color:var(--accent); font-weight:700}
+  .part h3{font-family:var(--sans); font-weight:800; font-size:15px; text-transform:uppercase; letter-spacing:.04em; margin:2px 0 4px}
+  ul{margin:10px 0; padding:0; list-style:none; max-width:620px}
+  li{font-size:15px; color:var(--soft); padding:7px 0 7px 20px; position:relative; border-top:1px solid var(--line)}
+  li:first-child{border-top:0}
+  li::before{content:""; position:absolute; left:0; top:15px; width:6px; height:6px; border-radius:50%; background:var(--accent)}
+  li b{color:var(--ink); font-weight:600}
+  .bands{display:flex; flex-direction:column; margin:16px 0; max-width:620px}
+  .band{display:flex; align-items:baseline; gap:12px; padding:11px 0; border-top:1px solid var(--line)}
+  .band .lab{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--on-accent); padding:3px 9px; border-radius:2px; flex-shrink:0; width:74px; text-align:center}
+  .band .txt{font-size:15px; color:var(--soft)}
+  .finehead{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:48px 0 0}
+  .fine{font-family:var(--serif); font-style:italic; font-size:16px; line-height:1.6; color:var(--faint); max-width:620px}
+  .fine b{font-style:normal; color:var(--soft); font-weight:600}
+  .cta{display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--on-accent); background:var(--accent); padding:13px 20px; border-radius:3px; margin-top:40px}
+</style>
+</head>
+<body>
+<div class="col">
+  <a class="back" href="index.html">← Back to the list</a>
+  <div class="kick">The method</div>
+  <h1>How the score works</h1>
+  <p class="lead">One number per bottle, 0 to 100. It answers exactly one question — <b>is this the smart bottle to buy at this price?</b> — and cheerfully ignores a different one: whether <i>you</i>, personally, will love it. We score <b>value, not your taste buds.</b> An 84 means you're getting a serious amount of wine for the money; whether it's your kind of wine stays gloriously, stubbornly your business.</p>
+  <div class="goldrule"></div>
+
+  <h2>The 100 points, in three parts</h2>
+  <p>A score is <b>Quality + Edge + Value</b>. Here's the split:</p>
+  <div class="meter"><span style="background:var(--accent); flex:50"></span><span style="background:#8a9a6b; flex:30"></span><span style="background:#3f6790; flex:20"></span></div>
+  <div class="meterkey"><i><span class="dot" style="background:var(--accent)"></span>Quality · 50</i><i><span class="dot" style="background:#8a9a6b"></span>Edge · 30</i><i><span class="dot" style="background:#3f6790"></span>Value · 20</i></div>
+
+  <div class="part">
+    <div class="pts">50 POINTS</div>
+    <h3>Quality — is it actually any good?</h3>
+    <p>Five marks, ten points each:</p>
+    <ul>
+      <li><b>Balance</b> — do the parts actually talk to each other, or just share a glass?</li>
+      <li><b>Length</b> — how long the finish sticks around after you swallow. Yes, we count the seconds.</li>
+      <li><b>Intensity</b> — real concentration from old vines and low yields, <i>not</i> a lab's idea of "rich."</li>
+      <li><b>Complexity</b> — the savory stuff past the fruit: pepper, graphite, sea salt, smoke, forest floor. Fruit is table stakes.</li>
+      <li><b>Tension</b> — the live-wire push-pull that yanks your hand back toward the glass. The rarest mark, and the whole difference between "alive" and "technically fine."</li>
+    </ul>
+    <p>It's an absolute scale — a 7 is a 7, whether the bottle is $22 or $92.</p>
+  </div>
+
+  <div class="part">
+    <div class="pts">30 POINTS</div>
+    <h3>Edge — why it punches above its price</h3>
+    <p>Every reason a bottle outpunches its price tag: an estate farming its own single vineyard, a soil with an actual résumé (volcanic, granite, slate), an unfashionable region that hasn't noticed it's good yet, old vines, a famous producer's lower-key second label. Here's the clever part — a $22 wine can't fake grand-cru farming, so it has to earn its keep somewhere more honest. The math knows the difference and routes by price on its own.</p>
+  </div>
+
+  <div class="part">
+    <div class="pts">20 POINTS</div>
+    <h3>Value — the money math</h3>
+    <p>The unsexy part, and the tiebreaker on a lot of bottles. Which price band you've landed in (some are sweet spots, some are tourist traps), how hard import tariffs are leaning on the bottle (domestic wine strolls right past the duty), and whether it's clean of red flags — manipulation, oak you could build a deck with, marketing that's selling a lifestyle instead of a wine.</p>
+  </div>
+
+  <h2>What the labels mean</h2>
+  <div class="bands">
+    <div class="band"><span class="lab" style="background:#d9a441">Elite</span><span class="txt"><b>70+</b> — buy it before someone else does.</span></div>
+    <div class="band"><span class="lab" style="background:#c98a3f">Strong</span><span class="txt"><b>60–69</b> — a confident yes.</span></div>
+    <div class="band"><span class="lab" style="background:#8a9a6b">Solid</span><span class="txt"><b>50–59</b> — fine. You'll know exactly what you signed up for.</span></div>
+    <div class="band"><span class="lab" style="background:#c0726f">Weak</span><span class="txt"><b>under 50</b> — save your money.</span></div>
+  </div>
+  <p>Scores top out in the mid-80s on purpose — we're reading shop listings, not pouring the bottle, so we're not about to hand you a 96 we can't look you in the eye about. And every score is read against its <b>price tier</b>: an 84 at $22 and an 84 at $90 are both excellent — for what they cost. The number is buy-worthiness; the tier is what kind of buy.</p>
+
+  <div class="finehead">The honest fine print</div>
+  <p class="fine">We have not personally tasted all 1,490+ of these, on account of having livers. Each score is built from the producer, the region, the vintage, and the shop's own write-up — scored <b>conservatively when the details are thin</b>, and giving genuine producers and real dirt the benefit of the doubt. We <b>ignore</b> critic points, shiny medals, and any adjective a marketing department would frame on a wall. The list refreshes weekly as the shelves turn over. No snobbery, no kickbacks — just the math on what's actually worth buying right now at Arrowine and The Wine Cabinet.</p>
+
+  <a class="cta" href="index.html">Browse the list ↗</a>
+</div>
+</body>
+</html>
