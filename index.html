@@ -64,10 +64,14 @@
   .dek b{color:var(--ink); font-weight:600}
 
   /* Controls (sticky) */
-  .controls{position:sticky; top:0; z-index:30; background:var(--surface);
-            padding:18px 32px 16px; border-bottom:1px solid var(--line)}
+  /* Only the slim search bar pins to the top; the masthead and the filter pills scroll
+     away with the page (like the pre-redesign site). The filters sit just under the
+     search, sharing the same surface, and slide up behind it as you scroll. */
+  .searchbar{position:sticky; top:0; z-index:30; background:var(--surface);
+             padding:16px 32px 14px; border-bottom:1px solid var(--line)}
+  .filters{background:var(--surface); padding:14px 32px 8px; border-bottom:1px solid var(--line)}
   .search{position:relative; display:flex; align-items:center; gap:10px;
-          border:1px solid var(--edge); border-radius:3px; padding:0 14px; margin-bottom:14px}
+          border:1px solid var(--edge); border-radius:3px; padding:0 14px}
   .search .lens{width:13px; height:13px; border:2px solid var(--muted); border-radius:50%; flex-shrink:0}
   /* 16px font keeps iOS from zooming the field on focus. */
   .search input{flex:1; min-width:0; background:transparent; border:0; outline:0; color:var(--ink);
@@ -177,7 +181,7 @@
 
   /* Mobile — single column narrows fluidly; controls stay sticky; tap targets stay ≥44px */
   @media (max-width:560px){
-    .mast{padding:32px 20px 24px} .controls{padding:16px 20px 14px}
+    .mast{padding:32px 20px 24px} .searchbar{padding:14px 20px 12px} .filters{padding:12px 20px 6px}
     .countline{padding:16px 20px 4px} .head{padding:16px 20px; gap:13px}
     .wordmark{font-size:clamp(52px,15vw,72px)} .sc{width:42px; font-size:34px}
     .exp-head,.note,.vm,.edges,.grid,.cta{padding-left:20px; padding-right:20px}
@@ -197,15 +201,16 @@ JavaScript to browse the interactive catalogue.</p></noscript>
     <div class="goldrule"></div>
     <p class="dek">Every bottle at <b>Arrowine</b> (Arlington) and <b>The Wine Cabinet</b> (Reston), ranked by how much wine you get for the price — not by the name on the label. Tap any bottle for the verdict.</p>
   </header>
-  <!-- Controls bar: in-store lookup + the existing filter groups, pinned to the top
-       so you can search or filter anytime, even deep in the list. -->
-  <div class="controls">
+  <!-- The in-store lookup pins to the top; the filter groups below it scroll away. -->
+  <div class="searchbar">
     <div class="search" id="searchbox">
       <span class="lens" aria-hidden="true"></span>
       <input id="search" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
              placeholder="Search a bottle, region, or grape">
       <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
     </div>
+  </div>
+  <div class="filters">
     <div class="legend" id="band-legend"></div>
     <div class="legend" id="store-legend"></div>
     <div class="legend" id="stock-legend"></div>
