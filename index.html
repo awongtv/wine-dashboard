@@ -221,6 +221,7 @@ JavaScript to browse the interactive catalogue.</p></noscript>
              placeholder="Search a bottle, region, or grape">
       <button class="clear" id="clearSearch" type="button" aria-label="Clear search">✕</button>
     </div>
+    
   </div>
   <div class="filters">
     <div class="legend" id="band-legend"></div>
@@ -632,6 +633,7 @@ function applyFilters(){
 // window. Two relevance tiers, both over a bottle's identity: exact whole-word matches
 // first, then prefix matches; each kept in score order.
 function computeVisible(fz){
+  
   const exactMatch = [], prefixMatch = [];
   for(let i=0;i<wines.length;i++){
     const w = wines[i], p = w.price;
@@ -879,5 +881,6 @@ const io = new IntersectionObserver(entries=>{
 
 applyFilters();   // initial paint: no filters -> full set in score order, windowed
 </script>
+
 </body>
 </html>
