@@ -1,6 +1,6 @@
 # Past The Label
 
-> Every wine at three Northern Virginia shops — Arrowine (Arlington), The Wine Cabinet (Reston) and Winetonomy (online) — scored 0–100 for value: how much real wine you're getting for the price. ~3,085 bottles, updated weekly.
+> Every wine at three Northern Virginia shops — Arrowine (Arlington), The Wine Cabinet (Reston) and Winetonomy (online) — scored 0–100 for value: how much real wine you're getting for the price. ~3,085 bottles, updated every other day.
 
 Past The Label rates the wine, not the label. The score rewards what's in the bottle (serious winemaking, real terroir, honest pricing) and docks bottles coasting on prestige. It is a conservative PREDICTION from each wine's credentials (producer, region, grape, vintage, price) — not a tasting note. Bands: 70+ Elite, 60–69 Strong, 50–59 Solid, under 50 Weak.
 
@@ -13,4 +13,4 @@ Past The Label rates the wine, not the label. The score rewards what's in the bo
 
 ## Notes
 - Shops: Arrowine (Arlington, VA), The Wine Cabinet (Reston, VA) and Winetonomy (online-only, Reston, VA).
-- Updated weekly. schema.org structured data (Product/Offer/Review + Dataset) on every page.
+- Updated every other day. schema.org structured data (Product/Offer/Review + Dataset) on every page.
