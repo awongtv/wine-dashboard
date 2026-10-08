@@ -164,6 +164,11 @@
   .reg .flag{font-size:12px; line-height:1; margin-right:2px; letter-spacing:0}
   .soldout{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em;
            text-transform:uppercase; color:#c0726f}
+  /* Which shop sells it: outlined in the shop's colour so it reads as a label, not a score. */
+  .shop{display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9px;
+        font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--soft);
+        border:1px solid var(--shop,var(--edge)); padding:1px 7px; border-radius:999px; white-space:nowrap}
+  .shop::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--shop,var(--muted))}
   .verdict{font-family:var(--serif); font-style:italic; font-size:13.5px; line-height:1.45;
            color:var(--faint); margin-top:9px; max-width:440px}
   .right{flex-shrink:0; text-align:right}
@@ -836,6 +841,7 @@ function buildCard(i){
            <span class="badge" style="background:${badgeBg}">${BAND_LABEL[w.band]||w.band}</span>
            <span class="kind"><span class="dot" style="background:${ty.color}"></span>${ty.label}</span>
            ${w.flag||w.region?`<span class="reg">${w.flag?`<span class="flag" title="origin">${w.flag}</span> `:''}${esc(w.region||'')}</span>`:''}
+           ${w.store?`<span class="shop" style="--shop:${storeColor(w.store)}" title="Sold at ${esc(storeLabel(w.store))}">${esc(storeLabel(w.store))}</span>`:''}
            ${sold}
          </div>
          ${verdict ? `<div class="verdict">${esc(verdict)}</div>` : ''}
